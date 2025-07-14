@@ -17,8 +17,8 @@
     const checkCheckoutForm = require('../utils/checkCheckoutForm');
     const handleUpsales = require('../utils/handleUpsales');
     const shot = require('../utils/screenshotHelper');
-    const checkNoOtherProductsOnPage = require("../../old-f/backend/utils/checkNoOtherProductsOnPage");
-    const productList = require("../../old-f/backend/utils/productNames.json");
+    const checkNoOtherProductsOnPage = require("../utils/checkNoOtherProductsOnPage");
+    const productList = require("../utils/productNames.json");
     const checkConfirmationPage = require('../utils/checkConfirmationPage');
 
     module.exports = async function mobileOnlyFlow(
