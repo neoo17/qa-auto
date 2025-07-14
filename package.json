@@ -1,0 +1,24 @@
+{
+  "name": "qa-autotest",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "cd frontend && vite",
+    "backend": "node backend/index.js",
+    "start": "concurrently \"npm run backend\" \"npm run dev\""
+  },
+  "dependencies": {
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "multer": "^2.0.1",
+    "playwright": "^1.53.2",
+    "puppeteer": "^24.11.2",
+    "tesseract.js": "^6.0.1",
+    "vue": "^3.5.17"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4",
+    "concurrently": "^8.2.0",
+    "vite": "^5.2.8"
+  }
+}
