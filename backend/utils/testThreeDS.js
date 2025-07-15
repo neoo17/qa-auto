@@ -5,7 +5,6 @@
  * @param {string} pageName - 'index' | 'checkout' | 'order'
  */
 module.exports = async function testThreeDS(page, log, threeDS, pageName) {
-    // Проверка скрытого лоадера #proc_popup
     async function checkProcPopup(expect = true) {
         const exists = await page.$('#proc_popup') !== null;
         log(expect
@@ -174,7 +173,5 @@ module.exports = async function testThreeDS(page, log, threeDS, pageName) {
         }
     }
 
-    else {
-        log(`⚠️ [${threeDS}] Неизвестный threeDS тип!`);
-    }
+
 };

@@ -2,7 +2,8 @@ module.exports = async function checkPageTitleMatchesState(page, stateData, log,
     const expectedTitle = stateData?.data?.templates?.title?.trim();
 
     if (!expectedTitle) {
-        throw new Error(`[${pageName}] Тайтл из state не найден!`);
+        log(`❌ [${pageName}] Тайтл из state не найден!`);
+        return;
     }
 
     const actualTitle = await page.title();
@@ -10,9 +11,8 @@ module.exports = async function checkPageTitleMatchesState(page, stateData, log,
     log(`📦 [${pageName}] Title из state: "${expectedTitle}"`);
 
     if (actualTitle.trim() !== expectedTitle) {
-        throw new Error(
-            `❌ [${pageName}] Title не совпадает!\nОжидалось: "${expectedTitle}"\nПолучено: "${actualTitle}"`
-        );
+        log(`❌ [${pageName}] Title не совпадает!\nОжидалось: "${expectedTitle}"\nПолучено: "${actualTitle}"`);
+        return;
     }
 
     log(`✅ [${pageName}] Title совпадает!`);

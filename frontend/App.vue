@@ -232,8 +232,8 @@
 
         <!-- 🖼️ Скриншоты -->
         <div v-if="screenshotsByTest[test.id]?.length"
-            class="screenshots-toggle-box"
-            :class="{opened: !test.screenshotsCollapsed}"
+             class="screenshots-toggle-box"
+             :class="{opened: !test.screenshotsCollapsed}"
         >
           <div class="screenshots-toggle-title" @click="test.screenshotsCollapsed = !test.screenshotsCollapsed">
             <span>🖼️ Скриншоты</span>
@@ -243,9 +243,9 @@
             <div v-show="!test.screenshotsCollapsed" class="screenshots-block">
               <div class="screenshots-thumbs">
                 <div v-for="(shot, i) in screenshotsByTest[test.id]"
-                    :key="shot.name"
-                    class="screenshot-thumb"
-                    @click="openScreenshotModal(idx, i)"
+                     :key="shot.name"
+                     class="screenshot-thumb"
+                     @click="openScreenshotModal(idx, i)"
                 >
                   <img :src="shot.url" :alt="shot.name" />
                   <div class="screenshot-label">{{ shot.name }}</div>
@@ -518,6 +518,7 @@ function makeTestObj() {
 function addTest() {
   if (tests.value.length < 10) tests.value.push(makeTestObj())
 }
+
 function removeTest(idx) {
   tests.value.splice(idx, 1)
 }
@@ -527,11 +528,13 @@ function filteredBrowsers(device) {
       devicesList.find(d => d.value === device)?.browsers.includes(b.value)
   )
 }
+
 function filteredBrowserVersions(device, browser) {
   const found = browsersList.find(b => b.value === browser)
   if (!found) return []
   return found.versions || []
 }
+
 function versionLabel(browser, version) {
   if (browser === 'chromium') {
     if (version === '120') return 'Chrome 120'
@@ -567,6 +570,7 @@ const threeDsOptions = {
 function getThreeDsOptions(partner) {
   return [{value: 'none', label: 'Нет 3DS'}, ...(threeDsOptions[partner] || [])];
 }
+
 function highlightLog(log) {
   if (log.includes('──────────────────────────────')) return `<span style="color:#3fa3ff;font-weight:bold;">${log}</span>`
   if (log.startsWith('➡️ Переход на страницу:')) return `<span style="color:#ffe063;font-weight:bold;">${log}</span>`
@@ -574,9 +578,11 @@ function highlightLog(log) {
   if (log.startsWith('❌') || log.startsWith('⚠️')) return `<span style="color:#ff6767;">${log}</span>`
   return log
 }
+
 function highlightError(log) {
   return `<span style="font-weight:500; color:#ff6767;">${log}</span>`
 }
+
 function syncGlobalToTests() {
   tests.value.forEach(t => {
     if (!t.useCustomConfig) {
@@ -591,6 +597,7 @@ function syncGlobalToTests() {
     }
   })
 }
+
 function toggleCustomConfig(test) {
   if (test.useCustomConfig) {
     test.selectedFlow = globalConfig.selectedFlow
@@ -630,15 +637,18 @@ watch(
 )
 
 const IMG_HEAVY_LIMIT = 50 * 500
+
 function isImageType(type) {
-  return ['image', 'img', 'jpeg', 'png', 'svg+xml', 'gif', 'webp', 'jpg'].some(key => (type||'').toLowerCase().includes(key))
+  return ['image', 'img', 'jpeg', 'png', 'svg+xml', 'gif', 'webp', 'jpg'].some(key => (type || '').toLowerCase().includes(key))
 }
+
 function heavyImages(pw) {
   if (!pw.resources) return []
   return pw.resources.filter(res =>
       isImageType(res.type) && res.transferred > IMG_HEAVY_LIMIT
   )
 }
+
 function pageLabel(page) {
   if (page === 'main') return 'Главная'
   if (page === 'qualify') return 'Qualify'
@@ -648,6 +658,7 @@ function pageLabel(page) {
   if (page === 'confirmation') return 'Confirmation'
   return page
 }
+
 function heavyClass(pw) {
   if (pw.page === 'main' && pw.transferred > 3500 * 1024) return 'too-heavy'
   if (pw.page !== 'main' && pw.transferred > 2000 * 1024) return 'heavy'
@@ -687,17 +698,15 @@ async function getScreenshotsReal(test) {
   ]
   const resArr = await Promise.all(names.map(async name => {
     try {
-      const res = await fetch(`http://localhost:3000/screenshots/${folder}/${name}`, { method: 'HEAD' })
-      if (res.ok) return { url: `http://localhost:3000/screenshots/${folder}/${name}`, name }
-    } catch {}
+      const res = await fetch(`http://localhost:3000/screenshots/${folder}/${name}`, {method: 'HEAD'})
+      if (res.ok) return {url: `http://localhost:3000/screenshots/${folder}/${name}`, name}
+    } catch {
+    }
     return null
   }))
   // Оставляем только существующие
   return resArr.filter(Boolean)
 }
-
-
-
 
 
 const screenshotModal = ref({
@@ -707,22 +716,26 @@ const screenshotModal = ref({
 })
 
 function openScreenshotModal(testIdx, imgIdx) {
-  screenshotModal.value = { show: true, testIdx, imgIdx }
+  screenshotModal.value = {show: true, testIdx, imgIdx}
   document.body.style.overflow = 'hidden'; // Запрет скролла под модалкой
 }
+
 function closeScreenshotModal() {
   screenshotModal.value.show = false
   document.body.style.overflow = '';
 }
+
 function prevScreenshot(test) {
   if (screenshotModal.value.imgIdx > 0) screenshotModal.value.imgIdx--
 }
+
 function nextScreenshot(test) {
   const shots = screenshotsByTest.value[test.id] || []
   if (screenshotModal.value.imgIdx < shots.length - 1) screenshotModal.value.imgIdx++
 }
 
 async function runAll() {
+  syncGlobalToTests()
   tests.value.forEach(t => {
     t.logs = [];
     t.errors = [];
@@ -794,7 +807,8 @@ async function runAll() {
               tests.value[obj.stream].testInfo.push(obj.text)
             }
           }
-        } catch {}
+        } catch {
+        }
       }
     }
   }
@@ -803,6 +817,18 @@ async function runAll() {
 
 async function runTest(idx) {
   const t = tests.value[idx]
+
+  if (!t.useCustomConfig) {
+    t.selectedFlow = globalConfig.selectedFlow
+    t.selectedCountry = globalConfig.selectedCountry
+    t.selected3ds = globalConfig.selected3ds
+    t.selectedDevice = globalConfig.selectedDevice
+    t.selectedBrowser = globalConfig.selectedBrowser
+    t.selectedVersion = globalConfig.selectedVersion
+    t.selectedPartner = globalConfig.selectedPartner
+    t.selectedCheckType = globalConfig.selectedCheckType
+  }
+
   if (!t.url) {
     alert('Введите URL')
     return
@@ -874,12 +900,14 @@ async function runTest(idx) {
               t.testInfo.push(obj.text)
             }
           }
-        } catch {}
+        } catch {
+        }
       }
     }
   }
   t.loading = false
 }
+
 </script>
 
 
@@ -888,9 +916,11 @@ body {
   font-family: system-ui, sans-serif;
   background: #f6f8fb;
 }
+
 .multiselect__option--highlight::after {
   display: none !important;
 }
+
 .screenshots-toggle-box {
   background: #fff;
   border-radius: 8px;
@@ -898,6 +928,7 @@ body {
   border: 1.3px solid #e5eafe;
   transition: all .13s;
 }
+
 .screenshots-toggle-title {
   padding: 9px 20px 9px 20px;
   cursor: pointer;
@@ -909,15 +940,23 @@ body {
   align-items: center;
   gap: 10px;
 }
-.screenshots-toggle-title .arrow { font-size: 1em; color: #b1b1b1; margin-left: auto; }
+
+.screenshots-toggle-title .arrow {
+  font-size: 1em;
+  color: #b1b1b1;
+  margin-left: auto;
+}
+
 .screenshots-block {
   padding: 15px 24px 10px 24px;
 }
+
 .screenshots-thumbs {
   display: flex;
   flex-wrap: wrap;
   gap: 18px 18px;
 }
+
 .screenshot-thumb {
   width: 90px;
   height: 90px;
@@ -934,18 +973,22 @@ body {
   transition: border .15s;
   position: relative;
 }
+
 .screenshot-thumb:hover {
   border: 2px solid #66aaff;
 }
+
 .screenshot-thumb img {
   max-width: 100%;
   max-height: 70px;
   display: block;
   margin: 0 auto;
 }
+
 .multiselect {
   max-width: 200px;
 }
+
 .screenshot-label {
   font-size: 0.89em;
   color: #3c4d6e;
@@ -957,14 +1000,18 @@ body {
 /* Модалка скриншота */
 .screenshot-modal {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(30,40,60,0.80);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(30, 40, 60, 0.80);
   z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
   animation: fadeIn .20s;
 }
+
 .screenshot-modal-content {
   position: relative;
   background: #fff;
@@ -976,6 +1023,7 @@ body {
   flex-direction: column;
   align-items: center;
 }
+
 .modal-image {
   width: 100%;
   max-width: 100%;
@@ -983,6 +1031,7 @@ body {
   border-radius: 5px;
   box-shadow: 0 2px 16px #001a3555;
 }
+
 .modal-close, .modal-prev, .modal-next {
   position: absolute;
   top: 18px;
@@ -996,9 +1045,21 @@ body {
   opacity: 0.8;
   transition: background .15s, color .15s;
 }
-.modal-close { right: 12px; top: 8px; font-size: 1.7em; }
-.modal-prev { left: 5px; }
-.modal-next { right: 5px; }
+
+.modal-close {
+  right: 12px;
+  top: 8px;
+  font-size: 1.7em;
+}
+
+.modal-prev {
+  left: 5px;
+}
+
+.modal-next {
+  right: 5px;
+}
+
 .modal-caption {
   margin-top: 12px;
   color: #132d53;
@@ -1008,11 +1069,21 @@ body {
 }
 
 @media (max-width: 700px) {
-  .modal-image { max-width: 92vw; }
-  .screenshot-modal-content { padding: 15px 3vw; min-width: 0; }
+  .modal-image {
+    max-width: 92vw;
+  }
+
+  .screenshot-modal-content {
+    padding: 15px 3vw;
+    min-width: 0;
+  }
 }
 
-.qa-container { margin: 32px auto 0 auto; max-width: 1200px; }
+.qa-container {
+  margin: 32px auto 0 auto;
+  max-width: 1200px;
+}
+
 .qa-header {
   display: flex;
   align-items: flex-end;
@@ -1022,6 +1093,7 @@ body {
   border-bottom: 1.5px solid #e7ebfa;
   padding-bottom: 8px;
 }
+
 .screenshot-modal-content {
   position: relative;
   background: #fff;
@@ -1063,15 +1135,18 @@ body {
   box-shadow: 0 2px 16px #001a3555;
   display: block;
 }
+
 .per-test-config-outer select {
   height: 40px;
   border-radius: 5px;
   font-size: 16px;
 }
+
 .per-test-config-outer .multiselect {
   width: 200px;
 }
-.per-test-config-outer .multiselect span{
+
+.per-test-config-outer .multiselect span {
   line-height: 16px;
 }
 
@@ -1088,6 +1163,7 @@ body {
   max-width: 100%;
   transition: box-shadow .13s;
 }
+
 .custom-param-header {
   cursor: pointer;
   font-size: 1.18em;
@@ -1102,17 +1178,20 @@ body {
   color: #2157a2;
   letter-spacing: 0.01em;
 }
+
 .custom-param-header .arrow {
   font-size: 1.07em;
   color: #6b8fc1;
   margin-left: 16px;
 }
+
 .custom-param-content {
   padding: 18px 38px 16px 38px;
   background: #e7f0fe;
   border-radius: 0 0 12px 12px;
   animation: fadeIn .18s;
 }
+
 .custom-param-content code {
   background: #e3e7f5;
   color: #13427d;
@@ -1120,23 +1199,35 @@ body {
   padding: 1px 8px;
   font-size: 0.98em;
 }
+
 .custom-param-content ul {
   padding-left: 25px;
   margin: 7px 0 8px 0;
 }
+
 .custom-param-content li {
   margin-bottom: 6px;
 }
+
 .fade-enter-active, .fade-leave-active {
   transition: opacity .20s;
 }
+
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
 }
+
 @media (max-width: 800px) {
-  .custom-param-header { font-size: 1em; padding: 14px 14px 13px 17px; }
-  .custom-param-content { padding: 12px 12px 10px 14px; }
+  .custom-param-header {
+    font-size: 1em;
+    padding: 14px 14px 13px 17px;
+  }
+
+  .custom-param-content {
+    padding: 12px 12px 10px 14px;
+  }
 }
+
 .qa-header h1 {
   font-size: 2.7rem;
   font-weight: 900;
@@ -1146,12 +1237,14 @@ body {
   line-height: 1.08;
   color: #222;
 }
+
 .qa-controls {
   display: flex;
   align-items: center;
   gap: 18px;
   flex-wrap: wrap;
 }
+
 .qa-controls button {
   display: flex;
   align-items: center;
@@ -1167,6 +1260,7 @@ body {
   transition: background 0.15s, border 0.15s, color 0.15s;
   box-shadow: 0 1px 3px #ededf5b5;
 }
+
 .qa-controls button:disabled {
   background: #ececec;
   color: #b5b5b5;
@@ -1174,7 +1268,12 @@ body {
   border-color: #e5e5e5;
   box-shadow: none;
 }
-.icon { font-size: 1.2em; line-height: 1; }
+
+.icon {
+  font-size: 1.2em;
+  line-height: 1;
+}
+
 .ninja-mod-label {
   display: flex;
   align-items: center;
@@ -1186,8 +1285,20 @@ body {
   padding: 2px 0 0 2px;
   color: #313241;
 }
-.ninja-mod-label input[type="checkbox"] { width: 18px; height: 18px; accent-color: #3890ff; margin-right: 2px; }
-.ninja-desc { font-size: 0.93em; font-weight: 400; color: #7e8a9c; margin-left: 2px; }
+
+.ninja-mod-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #3890ff;
+  margin-right: 2px;
+}
+
+.ninja-desc {
+  font-size: 0.93em;
+  font-weight: 400;
+  color: #7e8a9c;
+  margin-left: 2px;
+}
 
 /* Глобальные настройки */
 .global-config-card {
@@ -1199,16 +1310,19 @@ body {
   box-shadow: 0 1px 7px #b2b3ce29;
   max-width: 100%;
 }
+
 pre, .info-report pre {
   white-space: pre-wrap;
   word-break: break-all;
   overflow-wrap: break-word;
 }
+
 .info-report pre {
   white-space: pre-wrap;
   word-break: break-all;
   overflow-wrap: break-word;
 }
+
 .global-config-title {
   font-size: 1.22em;
   font-weight: 700;
@@ -1218,12 +1332,14 @@ pre, .info-report pre {
   margin-bottom: 12px;
   letter-spacing: 0.2px;
 }
+
 .global-config-fields.one-row {
   display: flex;
   gap: 13px;
   align-items: center;
   flex-wrap: nowrap;
 }
+
 .global-config-card select {
   height: 36px;
   border-radius: 4px;
@@ -1236,14 +1352,27 @@ pre, .info-report pre {
   min-width: 140px;
   max-width: 230px;
 }
-.global-config-card select:focus { border: 1.7px solid #86acff; }
+
+.global-config-card select:focus {
+  border: 1.7px solid #86acff;
+}
+
 @media (max-width: 1200px) {
-  .global-config-fields.one-row { flex-wrap: wrap; }
-  .global-config-card select { min-width: 120px; font-size: 1em; }
+  .global-config-fields.one-row {
+    flex-wrap: wrap;
+  }
+
+  .global-config-card select {
+    min-width: 120px;
+    font-size: 1em;
+  }
 }
 
 /* Test bar + настройка потока */
-.qa-multi-row { margin-bottom: 16px; }
+.qa-multi-row {
+  margin-bottom: 16px;
+}
+
 fieldset {
   border: 1px solid #e7ebfa;
   border-radius: 12px;
@@ -1252,6 +1381,7 @@ fieldset {
   padding-top: 0;
   box-shadow: 0 1px 8px #e7ebfa24;
 }
+
 legend {
   color: #fff;
   font-size: 1.4rem;
@@ -1260,6 +1390,7 @@ legend {
   background: #23232c;
   border-radius: 8px;
 }
+
 .test-bar {
   display: grid;
   grid-template-columns:
@@ -1273,6 +1404,7 @@ legend {
   border-radius: 9px 9px 0 0;
   margin-bottom: 8px;
 }
+
 .test-bar input, .test-bar select {
   height: 36px;
   border-radius: 7px;
@@ -1284,18 +1416,62 @@ legend {
   outline: none;
   transition: border 0.15s;
 }
-.test-bar input:focus, .test-bar select:focus { border: 1.5px solid #559dff; }
-.onlyicon { padding: 7px 7px 7px 7px; min-width: 35px; background: #282b32; border-radius: 7px; color: #bfc9e7; }
-.custom-param-input { min-width: 140px; background: #23242e; }
+
+.test-bar input:focus, .test-bar select:focus {
+  border: 1.5px solid #559dff;
+}
+
+.onlyicon {
+  padding: 7px 7px 7px 7px;
+  min-width: 35px;
+  background: #282b32;
+  border-radius: 7px;
+  color: #bfc9e7;
+}
+
+.custom-param-input {
+  min-width: 140px;
+  background: #23242e;
+}
 
 .test-btn, .test-remove {
-  height: 36px; width: 36px; font-size: 20px; border-radius: 7px; border: none; cursor: pointer;
+  height: 36px;
+  width: 36px;
+  font-size: 20px;
+  border-radius: 7px;
+  border: none;
+  cursor: pointer;
 }
-.test-btn { background: #dbefff; color: #146d1d; transition: background 0.18s; }
-.test-btn:disabled { background: #e5e5e7; color: #a0a0a7; cursor: not-allowed; }
-.test-remove { background: #ffdbdb; color: #ba2626; transition: background 0.18s; }
-.test-remove:hover { background: #ffbaba; }
-.test-status { padding-left: 18px; font-size: 17px; color: #aad2ff; margin: 0 0 7px 0; }
+
+.test-btn {
+  background: #dbefff;
+  color: #146d1d;
+  transition: background 0.18s;
+}
+
+.test-btn:disabled {
+  background: #e5e5e7;
+  color: #a0a0a7;
+  cursor: not-allowed;
+}
+
+.test-remove {
+  background: #ffdbdb;
+  color: #ba2626;
+  transition: background 0.18s;
+}
+
+.test-remove:hover {
+  background: #ffbaba;
+}
+
+.test-status {
+  padding-left: 18px;
+  font-size: 17px;
+  color: #aad2ff;
+  margin: 0 0 7px 0;
+}
+
 .log-block {
   margin-top: 8px;
   background: #181818;
@@ -1315,6 +1491,7 @@ legend {
   color: #e9ebf8;
   border: 1.5px solid #23253c;
 }
+
 .per-test-checkbox {
   font-size: 1.10em;
   font-weight: 500;
@@ -1322,16 +1499,26 @@ legend {
   align-items: center;
   gap: 10px;
 }
+
 .per-test-settings-block {
   display: flex;
   gap: 19px;
   flex-wrap: wrap;
   margin-top: 12px;
 }
+
 .per-test-setting {
-  display: flex; flex-direction: column; gap: 5px; min-width: 130px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 130px;
 }
-.per-test-setting span { font-size: 0.96em; font-weight: 600; color: #b2baf2; }
+
+.per-test-setting span {
+  font-size: 0.96em;
+  font-weight: 600;
+  color: #b2baf2;
+}
 
 .error-report {
   background: #2b1a1a;
@@ -1341,7 +1528,10 @@ legend {
   margin-top: 12px;
   font-size: 16px;
 }
-.error-report ul { padding-left: 16px; }
+
+.error-report ul {
+  padding-left: 16px;
+}
 
 /* ---- Вес страниц ---- */
 .perf-toggle-box {
@@ -1351,6 +1541,7 @@ legend {
   border: 1.3px solid #e5eafe;
   transition: all .13s;
 }
+
 .perf-toggle-title {
   padding: 9px 20px 9px 20px;
   cursor: pointer;
@@ -1362,23 +1553,79 @@ legend {
   align-items: center;
   gap: 10px;
 }
-.perf-toggle-title .arrow { font-size: 1em; color: #b1b1b1; margin-left: auto; }
-.fade-enter-active, .fade-leave-active { transition: opacity .22s; }
-.fade-enter, .fade-leave-to { opacity: 0; }
-.perf-report { background: #f5fbfa; color: #24282e; border-radius: 8px; padding: 13px 20px 10px 20px; font-size: 15px; }
-.perf-page-block { margin-bottom: 8px; }
-.perf-page-row {
-  font-weight: 500; font-size: 1.13em; margin-bottom: 3px; background: #ecf3f6; padding: 4px 12px; border-radius: 7px;
-  display: flex; align-items: center; gap: 18px;
+
+.perf-toggle-title .arrow {
+  font-size: 1em;
+  color: #b1b1b1;
+  margin-left: auto;
 }
-.perf-page-row.too-heavy { color: #fff; background: #b13434; }
-.perf-page-row.heavy { color: #fff; background: #d87116; }
-.perf-title { min-width: 80px; display: inline-block; font-weight: bold; }
-.perf-heavy-imgs { margin: 3px 0 0 18px; display: flex; flex-wrap: wrap; gap: 7px 20px; }
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity .22s;
+}
+
+.fade-enter, .fade-leave-to {
+  opacity: 0;
+}
+
+.perf-report {
+  background: #f5fbfa;
+  color: #24282e;
+  border-radius: 8px;
+  padding: 13px 20px 10px 20px;
+  font-size: 15px;
+}
+
+.perf-page-block {
+  margin-bottom: 8px;
+}
+
+.perf-page-row {
+  font-weight: 500;
+  font-size: 1.13em;
+  margin-bottom: 3px;
+  background: #ecf3f6;
+  padding: 4px 12px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.perf-page-row.too-heavy {
+  color: #fff;
+  background: #b13434;
+}
+
+.perf-page-row.heavy {
+  color: #fff;
+  background: #d87116;
+}
+
+.perf-title {
+  min-width: 80px;
+  display: inline-block;
+  font-weight: bold;
+}
+
+.perf-heavy-imgs {
+  margin: 3px 0 0 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 20px;
+}
+
 .perf-heavy-img {
-  display: flex; align-items: center; gap: 9px;
-  background: #fff2f2; border-radius: 4px; padding: 2px 10px; color: #d62b2b;
-  font-size: 1em; font-weight: bold; border: 1px solid #ffd3d3;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: #fff2f2;
+  border-radius: 4px;
+  padding: 2px 10px;
+  color: #d62b2b;
+  font-size: 1em;
+  font-weight: bold;
+  border: 1px solid #ffd3d3;
 }
 
 .info-toggle-box {
@@ -1388,6 +1635,7 @@ legend {
   border: 1.3px solid #e5eafe;
   transition: all .13s;
 }
+
 .info-toggle-title {
   padding: 9px 20px 9px 20px;
   cursor: pointer;
@@ -1399,7 +1647,13 @@ legend {
   align-items: center;
   gap: 10px;
 }
-.info-toggle-title .arrow { font-size: 1em; color: #b1b1b1; margin-left: auto; }
+
+.info-toggle-title .arrow {
+  font-size: 1em;
+  color: #b1b1b1;
+  margin-left: auto;
+}
+
 .info-report {
   background: #f8fbfd;
   color: #323549;
@@ -1407,6 +1661,7 @@ legend {
   padding: 13px 24px 8px 24px;
   font-size: 15px;
 }
+
 .info-row {
   margin-bottom: 6px;
   border-left: 3px solid #79bcff;
