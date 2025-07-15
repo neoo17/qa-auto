@@ -20,6 +20,7 @@
     const checkNoOtherProductsOnPage = require("../utils/checkNoOtherProductsOnPage");
     const productList = require("../utils/productNames.json");
     const checkConfirmationPage = require('../utils/checkConfirmationPage');
+    const testThreeDS = require('../utils/testThreeDS');
 
     module.exports = async function mobileOnlyFlow(
         page, log, context, url, country, custom, sendPerf, sendTestInfo, screenshotDir
@@ -38,6 +39,7 @@
         if (stateData?.data?.templates?.title) {
             await checkNoOtherProductsOnPage(page, stateData.data.templates.title, log, productList);
         }
+        await testThreeDS(page, log, custom.threeDS, 'index');
 
         await checkPageTitleMatchesState(page, stateData, log, "главная");
         if (typeof sendPerf === 'function') await collectPerfStats(page, 'main', sendPerf);
@@ -97,6 +99,7 @@
             await checkAllPopups(page, log, custom.partner);
         }
         await checkPageTitleMatchesState(page, stateData5, log, "checkout");
+        await testThreeDS(page, log, custom.threeDS, 'checkout');
         if (typeof sendPerf === 'function') await collectPerfStats(page, 'checkout', sendPerf);
         await shot(page, screenshotDir, 'checkout', log);
         await checkCheckoutForm(page, log, sendTestInfo, checkStateAjax, custom.checkType);

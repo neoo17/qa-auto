@@ -1,14 +1,16 @@
-const fieldsConfig = require('./fieldLabelsConfig.js');
-const SHIPPING_FIELDS = ['address', 'zipCode', 'city', 'state', 'country']; // country — опционально
-
 /**
  * @param {import('playwright').Page} page
  * @param {Function} log
  * @param {string} countryCode
  */
 module.exports = async function checkShippingForm(page, log, countryCode) {
+    const fieldsConfig = require('./fieldLabelsConfig.js');
+    const SHIPPING_FIELDS = ['address', 'zipCode', 'city', 'state', 'country']; // country — опционально
+
     log('📦 Проверяем наличие формы #shipping-mobile...');
     await page.waitForSelector('form#shipping-mobile', { timeout: 7000 });
+
+    const countryShort = countryCode.split('_')[0].toUpperCase();
 
     if (SHIPPING_FIELDS.includes('country')) {
         log('🌍 Проверяем наличие и значение select country');
@@ -20,8 +22,8 @@ module.exports = async function checkShippingForm(page, log, countryCode) {
                 'form#shipping-mobile select[name="country"], form#shipping-mobile select#id_country',
                 el => el.value
             );
-            if (selectedValue !== countryCode.toUpperCase()) {
-                log(`❌ В select страны выбрано "${selectedValue}", ожидалось "${countryCode.toUpperCase()}"`);
+            if (selectedValue !== countryShort) {
+                log(`❌ В select страны выбрано "${selectedValue}", ожидалось "${countryShort}"`);
             } else {
                 log(`✅ В select страны выбрано верное значение: "${selectedValue}"`);
             }
@@ -29,10 +31,10 @@ module.exports = async function checkShippingForm(page, log, countryCode) {
                 'form#shipping-mobile select[name="country"] option, form#shipping-mobile select#id_country option',
                 opts => opts.map(o => o.value)
             );
-            if (!options.includes(countryCode.toUpperCase())) {
-                log(`❌ Нет опции с value="${countryCode.toUpperCase()}" в select страны!`);
+            if (!options.includes(countryShort)) {
+                log(`❌ Нет опции с value="${countryShort}" в select страны!`);
             } else {
-                log(`✅ В select страны есть опция с value="${countryCode.toUpperCase()}"`);
+                log(`✅ В select страны есть опция с value="${countryShort}"`);
             }
         }
     }
@@ -49,7 +51,6 @@ module.exports = async function checkShippingForm(page, log, countryCode) {
             const inputSel = isSelect
                 ? `form#shipping-mobile select[name="${name}"]`
                 : `form#shipping-mobile input[name="${name}"]`;
-
 
             const isVisible = await page.$eval(inputSel, el => {
                 const style = window.getComputedStyle(el);
@@ -144,7 +145,6 @@ module.exports = async function checkShippingForm(page, log, countryCode) {
         if (!isVisible) continue;
 
         if (isSelect && name === 'state') {
-            // Выбираем второе значение в селекте (первый option часто пустой)
             const stateOptions = await page.$$eval(inputSel + ' option', opts => opts.map(o => o.value));
             if (stateOptions.length >= 2) {
                 await page.selectOption(inputSel, stateOptions[1]);

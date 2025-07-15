@@ -37,9 +37,41 @@
         </select>
 
         <select v-model="globalConfig.selectedCountry" @change="syncGlobalToTests">
-          <option value="ca">Canada</option>
-          <option value="us">USA</option>
+          <option value="ca">🇨🇦 CA</option>
+          <option value="us">🇺🇸 US</option>
+          <option value="au">🇦🇺 AU</option>
+          <option value="nz">🇳🇿 NZ</option>
+          <option value="il">🇮🇱 IL</option>
+          <option value="za">🇿🇦 ZA</option>
+          <option value="sg">🇸🇬 SG</option>
+          <option value="uk">🇬🇧 UK</option>
+          <option value="ie">🇮🇪 IE</option>
+          <option value="fr">🇫🇷 FR</option>
+          <option value="ca_fr">🇨🇦🇫🇷 CA (fr)</option>
+          <option value="ch_fr">🇨🇭🇫🇷 CH (fr)</option>
+          <option value="de">🇩🇪 DE</option>
+          <option value="ch_de">🇨🇭🇩🇪 CH (de)</option>
+          <option value="es">🇪🇸 ES</option>
+          <option value="us_es">🇺🇸🇪🇸 US (es)</option>
+          <option value="pr">🇵🇷 PR</option>
+          <option value="cl">🇨🇱 CL</option>
+          <option value="ar">🇦🇷 AR</option>
+          <option value="mx">🇲🇽 MX</option>
+          <option value="co">🇨🇴 CO</option>
+          <option value="pe">🇵🇪 PE</option>
+          <option value="pt">🇵🇹 PT</option>
+          <option value="br_pt">🇧🇷🇵🇹 BR (pt)</option>
+          <option value="se">🇸🇪 SE</option>
+          <option value="dk">🇩🇰 DK</option>
+          <option value="it">🇮🇹 IT</option>
+          <option value="no">🇳🇴 NO</option>
+          <option value="fi">🇫🇮 FI</option>
+          <option value="is">🇮🇸 IS</option>
+          <option value="nl">🇳🇱 NL</option>
+          <option value="jp">🇯🇵 JP</option>
         </select>
+
+
         <select v-model="globalConfig.selected3ds" @change="syncGlobalToTests">
           <option v-for="opt in getThreeDsOptions(globalConfig.selectedPartner)" :key="opt.value" :value="opt.value">
             {{ opt.label }}
@@ -387,7 +419,8 @@ const browsersList = [
 ]
 
 const flows = [
-  {value: 'mobileOnly', label: 'Mobile-only'}
+  {value: 'mobileOnly', label: 'Mobile-only'},
+  {value: 'basic', label: 'Basic'}
 ]
 const threeDsList = [
   {value: 'none', label: 'Нет 3DS'},
@@ -489,7 +522,6 @@ const threeDsOptions = {
 };
 
 function getThreeDsOptions(partner) {
-  // Можно добавить "нет 3DS" как первую опцию для всех:
   return [{value: 'none', label: 'Нет 3DS'}, ...(threeDsOptions[partner] || [])];
 }
 function highlightLog(log) {
@@ -668,7 +700,8 @@ async function runAll() {
     custom: {
       customParam: t.customParam,
       partner: t.selectedPartner,
-      checkType: t.selectedCheckType
+      checkType: t.selectedCheckType,
+      threeDS: t.selected3ds
     },
     ninja: ninjaMod.value
 
@@ -749,7 +782,8 @@ async function runTest(idx) {
     custom: {
       param: t.customParam,
       partner: t.selectedPartner,
-      checkType: t.selectedCheckType
+      checkType: t.selectedCheckType,
+      threeDS: t.selected3ds,
     },
     ninja: ninjaMod.value,
   }]
