@@ -36,40 +36,24 @@
           </option>
         </select>
 
-        <select v-model="globalConfig.selectedCountry" @change="syncGlobalToTests">
-          <option value="ca">🇨🇦 CA</option>
-          <option value="us">🇺🇸 US</option>
-          <option value="au">🇦🇺 AU</option>
-          <option value="nz">🇳🇿 NZ</option>
-          <option value="il">🇮🇱 IL</option>
-          <option value="za">🇿🇦 ZA</option>
-          <option value="sg">🇸🇬 SG</option>
-          <option value="uk">🇬🇧 UK</option>
-          <option value="ie">🇮🇪 IE</option>
-          <option value="fr">🇫🇷 FR</option>
-          <option value="ca_fr">🇨🇦🇫🇷 CA (fr)</option>
-          <option value="ch_fr">🇨🇭🇫🇷 CH (fr)</option>
-          <option value="de">🇩🇪 DE</option>
-          <option value="ch_de">🇨🇭🇩🇪 CH (de)</option>
-          <option value="es">🇪🇸 ES</option>
-          <option value="us_es">🇺🇸🇪🇸 US (es)</option>
-          <option value="pr">🇵🇷 PR</option>
-          <option value="cl">🇨🇱 CL</option>
-          <option value="ar">🇦🇷 AR</option>
-          <option value="mx">🇲🇽 MX</option>
-          <option value="co">🇨🇴 CO</option>
-          <option value="pe">🇵🇪 PE</option>
-          <option value="pt">🇵🇹 PT</option>
-          <option value="br_pt">🇧🇷🇵🇹 BR (pt)</option>
-          <option value="se">🇸🇪 SE</option>
-          <option value="dk">🇩🇰 DK</option>
-          <option value="it">🇮🇹 IT</option>
-          <option value="no">🇳🇴 NO</option>
-          <option value="fi">🇫🇮 FI</option>
-          <option value="is">🇮🇸 IS</option>
-          <option value="nl">🇳🇱 NL</option>
-          <option value="jp">🇯🇵 JP</option>
-        </select>
+        <multiselect
+            v-model="globalConfig.selectedCountry"
+            :options="countryOptions"
+            placeholder="Выберите страну"
+            label="label"
+            track-by="value"
+            :allow-empty="false"
+        >
+          <template #option="{ option }">
+            <img v-for="flag in option.flags" :src="flag" :key="flag" style="width:22px;margin-right:5px" />
+            <span>{{ option.label }}</span>
+          </template>
+          <template #singleLabel="{ option }">
+            <img v-for="flag in option.flags" :src="flag" :key="flag" style="width:22px;margin-right:5px" />
+            <span>{{ option.label }}</span>
+          </template>
+        </multiselect>
+
 
 
         <select v-model="globalConfig.selected3ds" @change="syncGlobalToTests">
@@ -145,11 +129,27 @@
               </div>
               <div class="per-test-setting">
                 <span>Страна:</span>
-                <select v-model="test.selectedCountry">
-                  <option value="ca">Canada</option>
-                  <option value="us">USA</option>
-                </select>
+                <multiselect
+                    v-model="test.selectedCountry"
+                    :options="countryOptions"
+                    placeholder="Выберите страну"
+                    label="label"
+                    track-by="value"
+                    :allow-empty="false"
+                    :disabled="!test.useCustomConfig"
+                >
+                  <template #option="{ option }">
+                    <img v-for="flag in option.flags" :src="flag" :key="flag" style="width:22px;margin-right:5px" />
+                    <span>{{ option.label }}</span>
+                  </template>
+                  <template #singleLabel="{ option }">
+                    <img v-for="flag in option.flags" :src="flag" :key="flag" style="width:22px;margin-right:5px" />
+                    <span>{{ option.label }}</span>
+                  </template>
+                </multiselect>
+
               </div>
+
               <div class="per-test-setting">
                 <span>3DS:</span>
                 <select v-model="test.selected3ds">
@@ -385,6 +385,49 @@ import { ref, reactive, nextTick, watch } from 'vue'
 const showParamInfo = ref(false)
 const screenshotsByTest = ref({})
 
+import Multiselect from 'vue-multiselect'
+import 'vue-multiselect/dist/vue-multiselect.css'
+
+const flag = code => `https://flagcdn.com/24x18/${code}.png`
+
+const countryOptions = [
+  { value: 'ca', label: 'CA', flags: [flag('ca')] },
+  { value: 'us', label: 'US', flags: [flag('us')] },
+  { value: 'au', label: 'AU', flags: [flag('au')] },
+  { value: 'nz', label: 'NZ', flags: [flag('nz')] },
+  { value: 'il', label: 'IL', flags: [flag('il')] },
+  { value: 'za', label: 'ZA', flags: [flag('za')] },
+  { value: 'sg', label: 'SG', flags: [flag('sg')] },
+  { value: 'uk', label: 'UK', flags: [flag('gb')] },
+  { value: 'ie', label: 'IE', flags: [flag('ie')] },
+  { value: 'fr', label: 'FR', flags: [flag('fr')] },
+  // Двойной флаг: CA (fr) — Канада и Франция
+  { value: 'ca_fr', label: 'CA (fr)', flags: [flag('ca'), flag('fr')] },
+  { value: 'ch_fr', label: 'CH (fr)', flags: [flag('ch'), flag('fr')] },
+  { value: 'de', label: 'DE', flags: [flag('de')] },
+  { value: 'ch_de', label: 'CH (de)', flags: [flag('ch'), flag('de')] },
+  { value: 'es', label: 'ES', flags: [flag('es')] },
+  { value: 'us_es', label: 'US (es)', flags: [flag('us'), flag('es')] },
+  { value: 'pr', label: 'PR', flags: [flag('pr')] },
+  { value: 'cl', label: 'CL', flags: [flag('cl')] },
+  { value: 'ar', label: 'AR', flags: [flag('ar')] },
+  { value: 'mx', label: 'MX', flags: [flag('mx')] },
+  { value: 'co', label: 'CO', flags: [flag('co')] },
+  { value: 'pe', label: 'PE', flags: [flag('pe')] },
+  { value: 'pt', label: 'PT', flags: [flag('pt')] },
+  { value: 'br_pt', label: 'BR (pt)', flags: [flag('br'), flag('pt')] },
+  { value: 'se', label: 'SE', flags: [flag('se')] },
+  { value: 'dk', label: 'DK', flags: [flag('dk')] },
+  { value: 'it', label: 'IT', flags: [flag('it')] },
+  { value: 'no', label: 'NO', flags: [flag('no')] },
+  { value: 'fi', label: 'FI', flags: [flag('fi')] },
+  { value: 'is', label: 'IS', flags: [flag('is')] },
+  { value: 'nl', label: 'NL', flags: [flag('nl')] },
+  { value: 'jp', label: 'JP', flags: [flag('jp')] }
+]
+
+const selectedCountry = ref(countryOptions[0])
+
 const devicesList = [
   {value: '', label: 'Desktop', browsers: ['chromium', 'firefox', 'webkit']},
   {value: 'iPhone 13', label: 'iPhone 13', browsers: ['webkit']},
@@ -434,7 +477,7 @@ const ninjaMod = ref(true)
 
 const globalConfig = reactive({
   selectedFlow: flows[0].value,
-  selectedCountry: 'ca',
+  selectedCountry: countryOptions.find(c => c.value === 'us'),
   selected3ds: 'none',
   selectedDevice: '',
   selectedBrowser: 'chromium',
@@ -549,7 +592,7 @@ function syncGlobalToTests() {
   })
 }
 function toggleCustomConfig(test) {
-  if (!test.useCustomConfig) {
+  if (test.useCustomConfig) {
     test.selectedFlow = globalConfig.selectedFlow
     test.selectedCountry = globalConfig.selectedCountry
     test.selected3ds = globalConfig.selected3ds
@@ -692,7 +735,7 @@ async function runAll() {
   const testsData = tests.value.map(t => ({
     url: t.url,
     flow: t.selectedFlow,
-    country: t.selectedCountry,
+    country: globalConfig.selectedCountry,
     threeDS: t.selected3ds,
     device: t.selectedDevice,
     browser: t.selectedBrowser,
@@ -774,7 +817,7 @@ async function runTest(idx) {
   const testsData = [{
     url: t.url,
     flow: t.selectedFlow,
-    country: t.selectedCountry,
+    country: t.selectedCountry.value, // <--- тут!
     threeDS: t.selected3ds,
     device: t.selectedDevice,
     browser: t.selectedBrowser,
@@ -845,6 +888,9 @@ body {
   font-family: system-ui, sans-serif;
   background: #f6f8fb;
 }
+.multiselect__option--highlight::after {
+  display: none !important;
+}
 .screenshots-toggle-box {
   background: #fff;
   border-radius: 8px;
@@ -896,6 +942,9 @@ body {
   max-height: 70px;
   display: block;
   margin: 0 auto;
+}
+.multiselect {
+  max-width: 200px;
 }
 .screenshot-label {
   font-size: 0.89em;
@@ -1013,6 +1062,17 @@ body {
   border-radius: 5px;
   box-shadow: 0 2px 16px #001a3555;
   display: block;
+}
+.per-test-config-outer select {
+  height: 40px;
+  border-radius: 5px;
+  font-size: 16px;
+}
+.per-test-config-outer .multiselect {
+  width: 200px;
+}
+.per-test-config-outer .multiselect span{
+  line-height: 16px;
 }
 
 .custom-param-info-wide {
