@@ -6,7 +6,6 @@ function getExpectedUpsale({ upsales, profile, upsaleIndex, page }) {
         const found = upsales.find(u => u.name && u.name.includes(upgradeName));
         if (found) return found;
     }
-
     let url = page.url();
     let match = url.match(/upsale-(\d+)\.html/);
     let skuFromUrl = match ? match[1] : null;
@@ -14,7 +13,6 @@ function getExpectedUpsale({ upsales, profile, upsaleIndex, page }) {
         const foundBySku = upsales.find(u => String(u.sku) === skuFromUrl);
         if (foundBySku) return foundBySku;
     }
-
     return upsales[upsaleIndex - 1] || null;
 }
 
@@ -22,7 +20,6 @@ async function compareTitle({ page, expectedUpsale, upsaleIndex, log }) {
     let expectedTitle = expectedUpsale?.templates?.title || '';
     let titleStripped = expectedTitle.replace(/Upsell|Upgrade/gi, '').trim().toLowerCase();
     let actualTitle = (await page.title() || '').replace(/Upsell|Upgrade/gi, '').trim().toLowerCase();
-
     log(`--- [Сравнение апсейла #${upsaleIndex}] ---`);
     log(`Тип апсейла: ${upsaleIndex === 1 ? 'UPGRADE' : 'ОБЫЧНЫЙ'}`);
     log(`Ожидаемый TITLE: "${titleStripped}"`);
@@ -36,7 +33,8 @@ async function compareTitle({ page, expectedUpsale, upsaleIndex, log }) {
     }
 }
 
-function compareSku({ expectedUpsale, postDataParsed, upsaleIndex, log, sendTestInfo, action }) {
+// ВАЖНО: сюда теперь передаём partner
+function compareSku({ expectedUpsale, postDataParsed, upsaleIndex, log, sendTestInfo, action, partner }) {
     let expectedSku = expectedUpsale?.sku;
     const actualSku = postDataParsed['upsale[]'] || null;
     log(`Ожидаемый SKU: ${String(expectedSku) === String(actualSku)
@@ -50,29 +48,37 @@ function compareSku({ expectedUpsale, postDataParsed, upsaleIndex, log, sendTest
     } else {
         log(`❌ [Check][#${upsaleIndex}] SKU не совпал! Ожидали: ${expectedSku}, Фактический (POST): ${actualSku}`);
     }
+    // тут правим:
     if (typeof sendTestInfo === 'function') {
-        sendTestInfo({
-            _section: action === 1 ? 'YES' : 'NO',
-            url: action === 1 ? 'ajax/add-upsale' : 'ajax/skip-upsells',
-            data: { 'upsale[]': actualSku }
-        });
+        let url;
+        if (action === 1) {
+            url = (partner === 'dnav3' || partner === 'newdna') ? 'ajax/upsale' : 'ajax/add-upsale';
+        } else {
+            url = (partner === 'dnav3' || partner === 'newdna') ? null : 'ajax/skip-upsells';
+        }
+        if (url) {
+            sendTestInfo({
+                _section: action === 1 ? 'YES' : 'NO',
+                url,
+                data: { 'upsale[]': actualSku }
+            });
+        }
     }
 }
 
-
 module.exports = async function handleUpsales(
-    page, log, custom, sendTestInfo, checkStateAjax, firstUpsaleState, screenshotDir
+    page, log, custom, sendTestInfo, checkStateAjax, firstUpsaleState, screenshotDir, partner
 ) {
     let selectSchema = "1";
     if (custom && typeof custom === 'string' && custom.trim().length > 0) selectSchema = custom.trim();
     if (custom && typeof custom === 'object' && custom.customParam) selectSchema = custom.customParam;
     let actions = selectSchema.split('-').map(x => Number(x));
     const buyAll = !actions || actions.length <= 1;
-
     let upsaleIndex = 1;
     const maxUpsales = 10;
     const compareUpsales = (firstUpsaleState && firstUpsaleState.upsales) ? firstUpsaleState.upsales : [];
     const compareProfile = (firstUpsaleState && firstUpsaleState.profile) ? firstUpsaleState.profile : {};
+    const isDnaLike = partner === 'dnav3' || partner === 'newdna';
 
     while (upsaleIndex < maxUpsales) {
         let currentUrl = page.url();
@@ -96,9 +102,14 @@ module.exports = async function handleUpsales(
             await page.goForward();
             await page.waitForTimeout(350);
         }
-
         if (upsaleIndex > 1 && typeof checkStateAjax === 'function') {
-            await checkStateAjax(page, log);
+            // Тут тоже не ждём state если DNA-партнёр и действие NO
+            let action = buyAll ? 1 : (actions[upsaleIndex] ?? 0);
+            if (!(isDnaLike && action !== 1)) {
+                await checkStateAjax(page, log);
+            } else {
+                log('🟡 [DNA] Отказ (NO) — не ждём /ajax/state и не ждём стейта');
+            }
             const urlAfterState = page.url();
             if (/confirmation\.html/i.test(urlAfterState)) {
                 log('➡️ Переход на confirmation');
@@ -159,30 +170,71 @@ module.exports = async function handleUpsales(
         let expectedUpsale = null;
 
         // --- ОЖИДАНИЕ ajax + ОЖИДАНИЕ state + КЛИК ---
-        let request, stateResponse;
+        let request = null, stateResponse = null;
         const isYes = action === 1;
-        const requestUrlPart = isYes ? '/ajax/add-upsale' : '/ajax/skip-upsells';
+        let requestUrlPart = null;
+        if (isYes) {
+            requestUrlPart = isDnaLike ? '/upsale' : '/ajax/add-upsale';
+        } else {
+            requestUrlPart = isDnaLike ? null : '/ajax/skip-upsells';
+        }
+
         try {
-            [request, stateResponse] = await Promise.all([
-                page.waitForRequest(req =>
-                        req.method() === 'POST' && req.url().includes(requestUrlPart),
-                    { timeout: 5000 }
-                ),
-                page.waitForResponse(res =>
+            let waitRequest = null;
+            let statePromise = null;
+            if (isDnaLike) {
+                // DNA-партнёры: на апсейле state не ловим (всё равно не поймаем)
+                if (isYes) {
+                    waitRequest = page.waitForRequest(req =>
+                            req.method() === 'POST' && req.url().includes('/upsale'),
+                        { timeout: 5000 }
+                    );
+                }
+                // NO — вообще ничего не ждём!
+            } else {
+                // Обычные партнёры — ловим и request, и state, оба до клика
+                if (isYes) {
+                    waitRequest = page.waitForRequest(req =>
+                            req.method() === 'POST' && req.url().includes('/ajax/add-upsale'),
+                        { timeout: 5000 }
+                    );
+                } else {
+                    waitRequest = page.waitForRequest(req =>
+                            req.method() === 'POST' && req.url().includes('/ajax/skip-upsells'),
+                        { timeout: 5000 }
+                    );
+                }
+                statePromise = page.waitForResponse(res =>
                         res.url().includes('/ajax/state') && res.status() === 200,
                     { timeout: 5000 }
-                ),
-                btnHandle.click()
-            ]);
+                );
+            }
+
+            await btnHandle.click();
+
+            // Если DNA и NO — сразу идём дальше, не ждём стейтов, не ловим request!
+            if (isDnaLike && !isYes) {
+                log('🟡 [DNA] Отказ (NO) — не ждём /ajax/state, идём дальше');
+                log(`✔️ Upsale #${upsaleIndex}: Отклонили`);
+                log('--------------------------');
+                upsaleIndex++;
+                continue;
+            }
+
+            request = waitRequest ? await waitRequest : null;
+            stateResponse = statePromise ? await statePromise : null;
+
         } catch (e) {
             log(`❌ Ошибка: не удалось обработать апсейл #${upsaleIndex} (${isYes ? 'YES' : 'NO'})`);
+            log(`ℹ️ Детали: ${e && e.message ? e.message : e}`);
             if (sendTestInfo) sendTestInfo({
-                error: `Ошибка: не удалось обработать апсейл #${upsaleIndex} (${isYes ? 'YES' : 'NO'})`
+                error: `Ошибка: не удалось обработать апсейл #${upsaleIndex} (${isYes ? 'YES' : 'NO'})`,
+                details: e && e.message ? e.message : e
             });
+            log(`ℹ️ Текущий url: ${page.url()}`);
             break;
         }
 
-        // --- Парсинг данных ---
         postDataParsed = {};
         if (request) {
             const postData = request.postData();
@@ -196,7 +248,9 @@ module.exports = async function handleUpsales(
 
         if (compareUpsales && compareUpsales.length) {
             expectedUpsale = getExpectedUpsale({ upsales: compareUpsales, profile: compareProfile, upsaleIndex, page });
-            compareSku({ expectedUpsale, postDataParsed, upsaleIndex, log, sendTestInfo, action });
+            compareSku({ expectedUpsale, postDataParsed, upsaleIndex, log, sendTestInfo, action, partner });
+        } else if (isDnaLike && !isYes) {
+            log('🟡 [DNA] Нет skip-запроса для NO, сравнение не требуется');
         }
 
         log(`✔️ Upsale #${upsaleIndex}: ${isYes ? 'Купили' : 'Отклонили'}`);
@@ -205,9 +259,7 @@ module.exports = async function handleUpsales(
         await page.waitForTimeout(350);
         const afterUrl = page.url();
 
-        // ---- ВОТ ЭТОТ КУСОК ----
         if (/confirmation\.html/i.test(afterUrl)) {
-            // Ждём state для confirmation, обязательно!
             try {
                 await page.waitForResponse(res =>
                         res.url().includes('/ajax/state') && res.status() === 200,
@@ -220,7 +272,6 @@ module.exports = async function handleUpsales(
             log('➡️ Переход на confirmation');
             break;
         }
-        // ---- /КУСОК ----
 
         upsaleIndex++;
     }

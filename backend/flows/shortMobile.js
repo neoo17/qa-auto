@@ -1,12 +1,10 @@
 const fs = require('fs');
 
 function ensureDirSync(dir) {
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, {recursive: true});
 }
 
 const checkAllPopups = require('../utils/checkAllPopups');
-const checkSlickSlider = require('../utils/checkSlickSlider');
-const clickSendButtonAndCheckQualify = require('../utils/clickSendButtonAndCheckQualify');
 const checkQualifyForm = require('../utils/checkQualifyForm');
 const checkStateAjax = require('../utils/checkStateAjax');
 const checkPageTitleMatchesState = require('../utils/checkPageTitleMatchesState');
@@ -16,41 +14,22 @@ const collectPerfStats = require('../utils/collectPerfStats');
 const checkShippingForm = require('../utils/checkShippingForm');
 const checkCheckoutForm = require('../utils/checkCheckoutForm');
 const shot = require('../utils/screenshotHelper');
-const checkNoOtherProductsOnPage = require("../utils/checkNoOtherProductsOnPage");
-const productList = require("../utils/productNames.json");
+
 const testThreeDS = require('../utils/testThreeDS');
 const testGdprBlockAdvanced = require("../utils/testGdprBlockAdvanced");
 
-module.exports = async function mobileOnlyFlow(
+module.exports = async function shortMobile(
     page, log, context, url, country, custom, sendPerf, sendTestInfo, screenshotDir, firstState
 ) {
     ensureDirSync(screenshotDir);
 
     log('🔵 Открыли страницу...');
+    log('👀 Обнаружена Mobile SHORT версия ');
 
-    // --- Index ---
-    await shot(page, screenshotDir, 'index', log);
-    const stateData = await firstState;
-
-    if (stateData?.data?.templates?.title) {
-        await checkNoOtherProductsOnPage(page, stateData.data.templates.title, log, productList);
-    }
-    await testThreeDS(page, log, custom.threeDS, 'index');
-    await checkPageTitleMatchesState(page, stateData, log, "index");
-    if (typeof sendPerf === 'function') await collectPerfStats(page, 'main', sendPerf);
+    const stateData2 = await firstState;
 
     if (custom.checkType === 'full') {
-        await testGdprBlockAdvanced(page, log, country, custom.partner, 'index');
-        await checkAllPopups(page, log, custom.partner, 'index');
-        await checkSlickSlider(page, log);
-    }
-
-    // --- Qualify ---
-    const qualifyStatePromise = checkStateAjax(page, log);
-    await clickSendButtonAndCheckQualify(page, log);
-    const stateData2 = await qualifyStatePromise;
-    if (custom.checkType === 'full') {
-        await testGdprBlockAdvanced(page, log, country, custom.partner, "qualify");
+        await testGdprBlockAdvanced(page, log, country, custom.partner, "checkout");
         await checkAllPopups(page, log, custom.partner, "qualify");
     }
     await shot(page, screenshotDir, 'qualify', log);
@@ -58,14 +37,13 @@ module.exports = async function mobileOnlyFlow(
     if (typeof sendPerf === 'function') await collectPerfStats(page, 'qualify', sendPerf);
     await checkQualifyForm(page, log, country, custom.partner);
 
-    // --- Choose ---
     log('──────────────────────────────');
     log('➡️ Переход на choose');
     const chooseStatePromise = checkStateAjax(page, log);
     await page.click('form#qualify button[type="submit"]');
     const stateData3 = await chooseStatePromise;
     if (custom.checkType === 'full') {
-        await testGdprBlockAdvanced(page, log, country, custom.partner, "choose");
+        await testGdprBlockAdvanced(page, log, country, custom.partner, "checkout");
         await checkAllPopups(page, log, custom.partner, "choose");
     }
     await shot(page, screenshotDir, 'choose', log);
@@ -82,7 +60,7 @@ module.exports = async function mobileOnlyFlow(
 
     log('=== Полученная страна: ' + country);
     if (custom.checkType === 'full') {
-        await testGdprBlockAdvanced(page, log, country, custom.partner, "shipping");
+        await testGdprBlockAdvanced(page, log, country, custom.partner, "checkout");
         await checkAllPopups(page, log, custom.partner, "shipping");
     }
     await shot(page, screenshotDir, 'shipping', log);
@@ -106,6 +84,8 @@ module.exports = async function mobileOnlyFlow(
     await shot(page, screenshotDir, 'checkout', log);
     await checkCheckoutForm(page, log, sendTestInfo, checkStateAjax, custom.checkType);
 
+
     return stateData5;
-};
+}
+
 

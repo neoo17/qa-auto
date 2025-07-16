@@ -21,7 +21,6 @@ module.exports = async function checkAllPopups(page, log, partner, pageName) {
         return;
     }
 
-    // === ПРОСТАЯ ПРОВЕРКА AFFILIATES ===
     let affiliatesFound = false;
     for (const link of visibleLinks) {
         const found = await link.evaluate(el => {
@@ -62,16 +61,14 @@ module.exports = async function checkAllPopups(page, log, partner, pageName) {
         }
     }
 
-    // ---- дальше твоя логика по попапам ----
+
     for (let i = 0; i < visibleLinks.length; i++) {
         const link = visibleLinks[i];
         await link.evaluate(el => el.scrollIntoView({ behavior: "smooth", block: "center" }));
         const text = await link.evaluate(el => el.textContent.trim());
         log(`🖱[${pageName}] Открываем попап по ссылке: "${text}"`);
-        await Promise.all([
-            page.waitForSelector('.modal:visible, .modal[style*="display: block"]', { timeout: 5000 }),
-            link.click(),
-        ]);
+        await link.click({ force: true });
+        await page.waitForSelector('.modal:visible, .modal[style*="display: block"]', { timeout: 5000 });
         log(`⏳[${pageName}] Ждём 1.2 секунды после открытия попапа`);
         await page.waitForTimeout(1200);
 

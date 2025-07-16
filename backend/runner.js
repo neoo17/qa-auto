@@ -1,7 +1,8 @@
     const playwright = require('playwright');
     const flows = {
         basic: require('./flows/basic'),
-        mobileOnly: require('./flows/mobile-only-full')
+        mobileOnly: require('./flows/mobile-only-full'),
+        auto: require('./flows/routerFlow')
     };
     const path = require('path')
     const fs = require('fs')
@@ -24,7 +25,7 @@
      * @param {function} [sendTestInfo]
      */
     async function runTest(
-        url, log, flow = 'basic', country, custom = {}, browser = 'chromium', device = '', ninja = true, version = 'stable', sendPerf, sendTestInfo
+        url, log, flow = 'auto', country, custom = {}, browser = 'chromium', device = '', ninja = true, version = 'stable', sendPerf, sendTestInfo
     ) {
         log(`▶️ Запускаем: ${browser} ${version} | ${device || 'Desktop'} ${ninja ? 'ninja-mod' : ''}`);
         const type = browser || 'chromium';
@@ -59,7 +60,7 @@
                     log('Console error: ' + msg.text());
             });
 
-            const flowFunc = flows[flow] || flows.basic;
+            const flowFunc = flows[flow] || flows.auto;
             await flowFunc(page, log, context, url, country, custom, sendPerf, sendTestInfo, screenshotDir);
             log(`🖼️ Скриншоты будут лежать тут: /screenshots/${path.basename(screenshotDir)}/`);
         } catch (e) {

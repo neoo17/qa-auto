@@ -7,20 +7,25 @@
  */
 module.exports = async function checkConfirmationPage(page, state, log) {
     try {
-        // Телефон из стейта
-        const statePhone = state?.data?.templates?.phone;
-        if (!statePhone) {
-            log('❗ Не найден телефон в стейте заказа');
-            return;
-        }
+        // Проверяем, есть ли .local-phone на странице
+        const localPhoneExists = await page.$('.local-phone') !== null;
+        if (localPhoneExists) {
+            // Телефон из стейта
+            const statePhone = state?.data?.templates?.phone;
+            if (!statePhone) {
+                log('❗ Не найден телефон в стейте заказа');
+                return;
+            }
 
-        // Телефон на странице
-        const pagePhone = await page.$eval('.local-phone', el => el.innerText.trim());
-        if (pagePhone === statePhone) {
-            log(`✅ Телефон на confirmation совпадает: ${pagePhone}`);
-        } else {
-            log(`❌ Телефон не совпадает! На странице: ${pagePhone}, в стейте: ${statePhone}`);
+            // Телефон на странице
+            const pagePhone = await page.$eval('.local-phone', el => el.innerText.trim());
+            if (pagePhone === statePhone) {
+                log(`✅ Телефон на confirmation совпадает: ${pagePhone}`);
+            } else {
+                log(`❌ Телефон не совпадает! На странице: ${pagePhone}, в стейте: ${statePhone}`);
+            }
         }
+        // Если элемента нет — ничего не делаем
     } catch (e) {
         log(`❗ Ошибка сравнения телефона на confirmation: ${e.message}`);
     }

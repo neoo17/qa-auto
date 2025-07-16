@@ -139,7 +139,9 @@ module.exports = async function checkCheckoutForm(page, log, sendTestInfo, check
         })(),
         page.click('form#checkout button[type="submit"]'),
         page.waitForNavigation({
-            url: url => /\/upsale-\d+\.html/i.test(url),
+            url: url =>
+                /\/upsale-\d+\.html/i.test(url) ||
+                /\/confirmation(\.html)?/i.test(url),
             waitUntil: 'load',
             timeout: 12000
         })
@@ -174,13 +176,17 @@ module.exports = async function checkCheckoutForm(page, log, sendTestInfo, check
     }
 
     const currentUrl = page.url();
+
     if (/\/upsale-\d+\.html/i.test(currentUrl)) {
         log(`➡️ Перешли на первый апсейл: ${currentUrl}`);
+    } else if (/\/confirmation(\.html)?/i.test(currentUrl)) {
+        log(`➡️ Перешли на confirmation: ${currentUrl}`);
     } else {
-        log('❌ Не перешли на апсейл-страницу!');
+        log('❌ Не перешли ни на апсейл, ни на confirmation-страницу!');
         if (sendTestInfo) {
             sendTestInfo({
-                error: '❌ Не перешли на апсейл-страницу!'
+                error: '❌ Не перешли ни на апсейл, ни на confirmation-страницу!',
+                url: currentUrl
             });
         }
     }

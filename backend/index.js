@@ -7,7 +7,7 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
-// Раздача папки со скриншотами (можно открывать по /screenshots/...)
+
 app.use('/screenshots', express.static(path.join(__dirname, 'screenshots')))
 
 app.post('/api/run-multi-test', async (req, res) => {

@@ -1,8 +1,7 @@
 /**
- * Ожидает успешный AJAX-запрос к /ajax/state на странице и логирует ответ.
  * @param {import('playwright').Page} page
  * @param {Function} log
- * @returns {Promise<any|undefined>} данные ответа, если получены
+ * @returns {Promise<any|undefined>}
  */
 module.exports = async function checkStateAjax(page, log) {
     log('🔎 Начинаю ждать /ajax/state...');

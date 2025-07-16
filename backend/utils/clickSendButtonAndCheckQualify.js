@@ -13,7 +13,7 @@ module.exports = async function clickSendButtonAndCheckQualify(page, log) {
 
 
     let success = false;
-    for (let i = 0; i < 20; i++) { // ~4 секунды (200мс * 20)
+    for (let i = 0; i < 20; i++) {
         await page.waitForTimeout(200);
         const url = page.url();
         if (url !== oldUrl && url.includes('qualify.html')) {

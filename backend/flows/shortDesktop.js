@@ -22,7 +22,7 @@ const productList = require("../utils/productNames.json");
 const checkConfirmationPage = require('../utils/checkConfirmationPage');
 const testThreeDS = require('../utils/testThreeDS');
 
-module.exports = async function Basic(
+module.exports = async function shortDesktop(
     page, log, context, url, country, custom, sendPerf, sendTestInfo, screenshotDir
 ) {
     ensureDirSync(screenshotDir);
@@ -70,7 +70,7 @@ module.exports = async function Basic(
 
     } else {
         console.log('=== [DEBUG] Страна на входе:', country);
-        log('👀 Обнаружена SHORT33333 версия ');
+        log('👀 Обнаружена SHORT22222 версия ');
         const stateData2 = await mainStatePromise;
         log('=== Полученная страна: ' + country);
         if (custom.checkType === 'full') {

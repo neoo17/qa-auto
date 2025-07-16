@@ -37,12 +37,15 @@
         </select>
 
         <multiselect
+            :key="globalConfig.selectedCountry?.value"
             v-model="globalConfig.selectedCountry"
             :options="countryOptions"
+            @input="() => { (tests.value || []).forEach(t => t.countryAuto = false) }"
             placeholder="Выберите страну"
             label="label"
             track-by="value"
             :allow-empty="false"
+            :disabled="false"
         >
           <template #option="{ option }">
             <img v-for="flag in option.flags" :src="flag" :key="flag" style="width:22px;margin-right:5px" />
@@ -130,20 +133,28 @@
               <div class="per-test-setting">
                 <span>Страна:</span>
                 <multiselect
+                    :key="test.selectedCountry?.value"
                     v-model="test.selectedCountry"
                     :options="countryOptions"
+                    @input="() => { test.countryAuto = false }"
                     placeholder="Выберите страну"
                     label="label"
                     track-by="value"
                     :allow-empty="false"
-                    :disabled="!test.useCustomConfig"
+                    :disabled="false"
                 >
                   <template #option="{ option }">
-                    <img v-for="flag in option.flags" :src="flag" :key="flag" style="width:22px;margin-right:5px" />
+                    <img   v-for="flag in (option.flags || [])"
+                           :src="flag"
+                           :key="flag"
+                           style="width:22px;margin-right:5px" />
                     <span>{{ option.label }}</span>
                   </template>
                   <template #singleLabel="{ option }">
-                    <img v-for="flag in option.flags" :src="flag" :key="flag" style="width:22px;margin-right:5px" />
+                    <img   v-for="flag in (option.flags || [])"
+                           :src="flag"
+                           :key="flag"
+                           style="width:22px;margin-right:5px" />
                     <span>{{ option.label }}</span>
                   </template>
                 </multiselect>
@@ -462,8 +473,8 @@ const browsersList = [
 ]
 
 const flows = [
-  {value: 'mobileOnly', label: 'Mobile-only'},
-  {value: 'basic', label: 'Basic'}
+  {value: 'routerFlow', label: 'Auto'},
+  // {value: 'basic', label: 'Basic'}
 ]
 const threeDsList = [
   {value: 'none', label: 'Нет 3DS'},
@@ -494,6 +505,7 @@ function makeTestObj() {
     url: '',
     selectedFlow: globalConfig.selectedFlow,
     selectedCountry: globalConfig.selectedCountry,
+    countryAuto: true,
     selected3ds: globalConfig.selected3ds,
     selectedDevice: globalConfig.selectedDevice,
     selectedBrowser: globalConfig.selectedBrowser,
@@ -514,7 +526,11 @@ function makeTestObj() {
     screenshotsCollapsed: true // Для вкладки скриншотов
   }
 }
-
+function onCountryInput() {
+  if (Array.isArray(tests.value)) {
+    tests.value.forEach(t => t.countryAuto = false)
+  }
+}
 function addTest() {
   if (tests.value.length < 10) tests.value.push(makeTestObj())
 }
@@ -649,6 +665,37 @@ function heavyImages(pw) {
   )
 }
 
+
+watch(
+    () => tests.value.map(t => t.url),
+    (urls, prevUrls) => {
+      urls.forEach((url, idx) => {
+        if (!url || url === prevUrls[idx]) return;
+        const geo = extractGeoFromUrl(url);
+        if (geo) {
+          const opt = countryOptions.find(o => o.value === geo);
+          if (opt && tests.value[idx].countryAuto) {
+            tests.value[idx].selectedCountry = opt;
+            if (!tests.value[idx].useCustomConfig) {
+              globalConfig.selectedCountry = opt;
+            }
+          }
+        }
+      });
+    }
+)
+
+
+function extractGeoFromUrl(url) {
+  const m = url.match(/\/([a-z]{2}(?:-[a-z]{2})?)-v\d+/i);
+  if (m) return m[1].replace('-', '_').toLowerCase();
+  const intl = url.match(/\/intl-([a-z]{2}(?:-[a-z]{2})?)-v\d+/i);
+  if (intl) return intl[1].replace('-', '_').toLowerCase();
+  return null;
+}
+
+
+
 function pageLabel(page) {
   if (page === 'main') return 'Главная'
   if (page === 'qualify') return 'Qualify'
@@ -748,7 +795,7 @@ async function runAll() {
   const testsData = tests.value.map(t => ({
     url: t.url,
     flow: t.selectedFlow,
-    country: globalConfig.selectedCountry,
+    country: t.selectedCountry?.value || globalConfig.selectedCountry.value,
     threeDS: t.selected3ds,
     device: t.selectedDevice,
     browser: t.selectedBrowser,
