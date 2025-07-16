@@ -21,6 +21,7 @@ const productList = require("../utils/productNames.json");
 const testThreeDS = require('../utils/testThreeDS');
 const testGdprBlockAdvanced = require("../utils/testGdprBlockAdvanced");
 const checkOnPage = require("../utils/checkOnPage");
+const checkPunctuation = require("../utils/checkPunctuation");
 
 module.exports = async function mobileOnlyFlow(
     page, log, context, url, country, custom, sendPerf, sendTestInfo, screenshotDir, firstState
@@ -40,6 +41,7 @@ module.exports = async function mobileOnlyFlow(
     if (typeof sendPerf === 'function') await collectPerfStats(page, 'main', sendPerf);
 
     if (custom.checkType === 'full') {
+        await checkPunctuation(page, log, country);
         await testGdprBlockAdvanced(page, log, country, custom.partner, 'index');
         await checkSlickSlider(page, log);
         await checkAllPopups(page, log, custom.partner, 'index');

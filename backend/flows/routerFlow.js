@@ -18,7 +18,7 @@ module.exports = async function routerFlow(page, log, context, url, country, cus
     let stateData;
 
     if (await page.$('form#shipping') !== null) {
-        stateData = await Basic(page, log, context, url, country, custom, sendPerf, sendTestInfo, screenshotDir);
+        stateData = await Basic(page, log, context, url, country, custom, sendPerf, sendTestInfo, screenshotDir, firstState);
         await continueFlowAfterQualify(page, log, country, custom, sendPerf, sendTestInfo, screenshotDir, stateData);
         return;
     }
@@ -41,7 +41,6 @@ module.exports = async function routerFlow(page, log, context, url, country, cus
 async function continueFlowAfterQualify(
     page, log, country, custom, sendPerf, sendTestInfo, screenshotDir, stateData
 ) {
-
 
     if (stateData && stateData.data.upsales.length > 0) {
         log('──────────────────────────────');
