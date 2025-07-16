@@ -741,6 +741,8 @@ async function getScreenshotsReal(test) {
     'checkout.png',
     'upsale-1.png',
     'upsale-2.png',
+    'upsale-3.png',
+    'upsale-4.png',
     'confirmation.png'
   ]
   const resArr = await Promise.all(names.map(async name => {

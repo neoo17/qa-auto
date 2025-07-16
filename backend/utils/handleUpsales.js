@@ -103,7 +103,6 @@ module.exports = async function handleUpsales(
             await page.waitForTimeout(350);
         }
         if (upsaleIndex > 1 && typeof checkStateAjax === 'function') {
-            // Тут тоже не ждём state если DNA-партнёр и действие NO
             let action = buyAll ? 1 : (actions[upsaleIndex] ?? 0);
             if (!(isDnaLike && action !== 1)) {
                 await checkStateAjax(page, log);
@@ -132,8 +131,8 @@ module.exports = async function handleUpsales(
         let action = 1;
         if (!buyAll) action = actions[upsaleIndex] ?? 0;
         let btnSelector = action === 1
-            ? '.button_fixed .button__yes.u-button, .button__yes:not([style*="display:none"])'
-            : '.button__no:not([style*="display:none"])';
+            ? 'a.button__yes:not([style*="display:none"])'
+            : 'a.button__no:not([style*="display:none"])';
 
         let btnHandle;
         try {
@@ -147,6 +146,19 @@ module.exports = async function handleUpsales(
                 error: `Нет видимой кнопки ${action === 1 ? 'YES' : 'NO'} для апсейла #${upsaleIndex}`
             });
             break;
+        }
+
+        const hasBonusPopup = await page.$('.bonus-popup-wrapper');
+        if (hasBonusPopup) {
+            log('ℹ️ На апсейле обнаружена бонусная модалка — закрываем её');
+            const closeBtn = await page.$('.bonus-popup-wrapper .close-popup');
+            if (closeBtn) {
+                await closeBtn.click();
+                await page.waitForSelector('.bonus-popup-wrapper', { state: 'detached', timeout: 5000 }).catch(() => {});
+                log('✅ Модалка закрыта');
+            } else {
+                log('⚠️ Не нашли .close-popup для закрытия модалки!');
+            }
         }
 
         if (screenshotDir) {
@@ -183,16 +195,13 @@ module.exports = async function handleUpsales(
             let waitRequest = null;
             let statePromise = null;
             if (isDnaLike) {
-                // DNA-партнёры: на апсейле state не ловим (всё равно не поймаем)
                 if (isYes) {
                     waitRequest = page.waitForRequest(req =>
                             req.method() === 'POST' && req.url().includes('/upsale'),
                         { timeout: 5000 }
                     );
                 }
-                // NO — вообще ничего не ждём!
             } else {
-                // Обычные партнёры — ловим и request, и state, оба до клика
                 if (isYes) {
                     waitRequest = page.waitForRequest(req =>
                             req.method() === 'POST' && req.url().includes('/ajax/add-upsale'),
@@ -210,6 +219,7 @@ module.exports = async function handleUpsales(
                 );
             }
 
+            log(`🖱️ Кликаю по кнопке ${action === 1 ? 'YES' : 'NO'} на апсейле #${upsaleIndex}`);
             await btnHandle.click();
 
             // Если DNA и NO — сразу идём дальше, не ждём стейтов, не ловим request!

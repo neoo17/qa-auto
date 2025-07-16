@@ -114,7 +114,7 @@ module.exports = async function checkQualifyForm(page, log, countryCode, partner
         if (stillHere) {
             log('✅ Форма осталась — невалидный email не пропущен');
         } else {
-            log('❌ Форма ушла — баг в валидации email');
+            log(`❌ Форма ушла — баг в валидации email: "${bad}"`);
             return;
         }
         await page.fill('input[name="email"]', '');

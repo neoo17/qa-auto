@@ -17,6 +17,7 @@ const shot = require('../utils/screenshotHelper');
 
 const testThreeDS = require('../utils/testThreeDS');
 const testGdprBlockAdvanced = require("../utils/testGdprBlockAdvanced");
+const checkOnPage = require("../utils/checkOnPage");
 
 module.exports = async function shortMobile(
     page, log, context, url, country, custom, sendPerf, sendTestInfo, screenshotDir, firstState
@@ -41,7 +42,10 @@ module.exports = async function shortMobile(
     log('──────────────────────────────');
     log('➡️ Переход на choose');
     const chooseStatePromise = checkStateAjax(page, log);
-    await page.click('form#qualify button[type="submit"]');
+
+    if (await checkOnPage(page, 'index.html')) {
+        await page.click('form#qualify button[type="submit"]');
+    }
     const stateData3 = await chooseStatePromise;
     if (custom.checkType === 'full') {
         await testGdprBlockAdvanced(page, log, country, custom.partner, "checkout");
@@ -73,7 +77,11 @@ module.exports = async function shortMobile(
     log('──────────────────────────────');
     log('➡️ Переход на checkout');
     const checkoutStatePromise = checkStateAjax(page, log);
-    await page.click('form#shipping-mobile button[type="submit"]');
+
+    if (await checkOnPage(page, 'shipping.html')) {
+        await page.click('form#shipping-mobile button[type="submit"]');
+    }
+
     const stateData5 = await checkoutStatePromise;
     if (custom.checkType === 'full') {
         await testGdprBlockAdvanced(page, log, country, custom.partner, "checkout");

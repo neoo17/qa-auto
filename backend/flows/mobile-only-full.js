@@ -20,6 +20,7 @@ const checkNoOtherProductsOnPage = require("../utils/checkNoOtherProductsOnPage"
 const productList = require("../utils/productNames.json");
 const testThreeDS = require('../utils/testThreeDS');
 const testGdprBlockAdvanced = require("../utils/testGdprBlockAdvanced");
+const checkOnPage = require("../utils/checkOnPage");
 
 module.exports = async function mobileOnlyFlow(
     page, log, context, url, country, custom, sendPerf, sendTestInfo, screenshotDir, firstState
@@ -27,7 +28,6 @@ module.exports = async function mobileOnlyFlow(
     ensureDirSync(screenshotDir);
 
     log('🔵 Открыли страницу...');
-
     // --- Index ---
     await shot(page, screenshotDir, 'index', log);
     const stateData = await firstState;
@@ -41,8 +41,9 @@ module.exports = async function mobileOnlyFlow(
 
     if (custom.checkType === 'full') {
         await testGdprBlockAdvanced(page, log, country, custom.partner, 'index');
-        await checkAllPopups(page, log, custom.partner, 'index');
         await checkSlickSlider(page, log);
+        await checkAllPopups(page, log, custom.partner, 'index');
+
     }
 
     // --- Qualify ---
@@ -62,7 +63,11 @@ module.exports = async function mobileOnlyFlow(
     log('──────────────────────────────');
     log('➡️ Переход на choose');
     const chooseStatePromise = checkStateAjax(page, log);
-    await page.click('form#qualify button[type="submit"]');
+
+    if (await checkOnPage(page, 'qualify.html')) {
+        await page.click('form#qualify button[type="submit"]');
+    }
+
     const stateData3 = await chooseStatePromise;
     if (custom.checkType === 'full') {
         await testGdprBlockAdvanced(page, log, country, custom.partner, "choose");
@@ -94,7 +99,9 @@ module.exports = async function mobileOnlyFlow(
     log('──────────────────────────────');
     log('➡️ Переход на checkout');
     const checkoutStatePromise = checkStateAjax(page, log);
-    await page.click('form#shipping-mobile button[type="submit"]');
+    if (await checkOnPage(page, 'shipping.html')) {
+        await page.click('form#shipping-mobile button[type="submit"]');
+    }
     const stateData5 = await checkoutStatePromise;
     if (custom.checkType === 'full') {
         await testGdprBlockAdvanced(page, log, country, custom.partner, "checkout");
