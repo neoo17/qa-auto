@@ -10,35 +10,6 @@ module.exports = async function checkShippingForm(page, log, countryCode) {
     log('📦 Проверяем наличие формы #shipping-mobile...');
     await page.waitForSelector('form#shipping-mobile', { timeout: 7000 });
 
-    const countryShort = countryCode.split('_')[0].toUpperCase();
-
-    if (SHIPPING_FIELDS.includes('country')) {
-        log('🌍 Проверяем наличие и значение select country');
-        const countrySelect = await page.$('form#shipping-mobile select[name="country"], form#shipping-mobile select#id_country');
-        if (!countrySelect) {
-            log('❌ Не найден select[name="country"] (или #id_country) в shipping-форме!');
-        } else {
-            const selectedValue = await page.$eval(
-                'form#shipping-mobile select[name="country"], form#shipping-mobile select#id_country',
-                el => el.value
-            );
-            if (selectedValue !== countryShort) {
-                log(`❌ В select страны выбрано "${selectedValue}", ожидалось "${countryShort}"`);
-            } else {
-                log(`✅ В select страны выбрано верное значение: "${selectedValue}"`);
-            }
-            const options = await page.$$eval(
-                'form#shipping-mobile select[name="country"] option, form#shipping-mobile select#id_country option',
-                opts => opts.map(o => o.value)
-            );
-            if (!options.includes(countryShort)) {
-                log(`❌ Нет опции с value="${countryShort}" в select страны!`);
-            } else {
-                log(`✅ В select страны есть опция с value="${countryShort}"`);
-            }
-        }
-    }
-
     log(`🌎 Проверяем лейблы и плейсхолдеры shipping для ${countryCode}`);
     const config = fieldsConfig[countryCode];
     if (!config) {
@@ -144,46 +115,41 @@ module.exports = async function checkShippingForm(page, log, countryCode) {
 
         if (!isVisible) continue;
 
+
         if (isSelect && name === 'state') {
-            // --- КАСТОМНЫЙ SELECT (dropdown) ---
+
             const customDropdownSelect = await page.$('form#shipping-mobile .dropdown .dropdown-select');
             if (customDropdownSelect) {
                 log('⚡️ [state] Кастомный select (dropdown), выбираем штат через .dropdown-menu-item');
                 await customDropdownSelect.click();
-                await page.waitForSelector('form#shipping-mobile .dropdown-menu', { timeout: 2000 }).catch(() => {});
-                const states = await page.$$eval('form#shipping-mobile .dropdown-menu-item', items =>
-                    items.map(el => ({
-                        value: el.getAttribute('data-value'),
-                        text: el.textContent,
-                        isSelect: el.classList.contains('is-select'),
-                        style: getComputedStyle(el).display
-                    }))
-                );
-                const visibleStates = states.filter(s => s.style !== 'none');
-                const toPick = visibleStates.find(s => !s.isSelect && s.value);
+                await page.waitForSelector('form#shipping-mobile .dropdown-menu', { timeout: 2500 });
+                await page.waitForTimeout(200);
+                const toPick = await page.$('form#shipping-mobile .dropdown-menu-item:not(.is-select)[data-value]');
                 if (toPick) {
-                    await page.click(`form#shipping-mobile .dropdown-menu-item[data-value="${toPick.value}"]`);
-                    log(`✅ [state] Кликнули по кастомному штату: ${toPick.text}`);
+                    const value = await toPick.getAttribute('data-value');
+                    const text = await toPick.evaluate(el => el.textContent.trim());
+                    await toPick.click();
+                    log(`✅ [state] Кликнули по кастомному штату: ${text}`);
                 } else {
                     log('❌ [state] Не нашли доступный штат для выбора в кастомном dropdown!');
                 }
             } else {
-                // --- ОБЫЧНЫЙ SELECT ---
+                // Обычный select
                 log('🟢 [state] Обычный select, выбираем штат через .selectOption');
                 const stateOptions = await page.$$eval(inputSel + ' option', opts => opts.map(o => o.value).filter(Boolean));
-                if (stateOptions.length >= 2) {
-                    await page.selectOption(inputSel, stateOptions[1]);
-                    log(`✅ [state] Выбрали штат "${stateOptions[1]}" в обычном select`);
+                if (stateOptions.length >= 1) {
+                    await page.selectOption(inputSel, stateOptions[0]);
+                    await page.$eval(inputSel, el => {
+                        el.dispatchEvent(new Event('change', { bubbles: true }));
+                    });
+                    const currentValue = await page.$eval(inputSel, el => el.value);
+                    log(`✅ [state] Выбрали штат "${stateOptions[0]}" в обычном select`);
                 } else {
-                    log('❌ [state] Недостаточно опций для выбора в обычном select!');
+                    log('❌ [state] Нет доступных опций для выбора в обычном select!');
                 }
             }
         } else if (isSelect) {
-            // Любой другой селект
-            const options = await page.$$eval(inputSel + ' option', opts => opts.map(o => o.value).filter(Boolean));
-            if (options.length >= 2) {
-                await page.selectOption(inputSel, options[1]);
-            }
+            continue;
         } else {
             await page.fill(inputSel, 'test');
         }

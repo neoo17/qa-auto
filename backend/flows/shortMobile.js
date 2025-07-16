@@ -35,6 +35,7 @@ module.exports = async function shortMobile(
     await shot(page, screenshotDir, 'qualify', log);
     await checkPageTitleMatchesState(page, stateData2, log, "qualify");
     if (typeof sendPerf === 'function') await collectPerfStats(page, 'qualify', sendPerf);
+    await testThreeDS(page, log, custom.threeDS, 'qualify');
     await checkQualifyForm(page, log, country, custom.partner);
 
     log('──────────────────────────────');

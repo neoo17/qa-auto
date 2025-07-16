@@ -2,7 +2,7 @@
  * @param {import('playwright').Page} page
  * @param {Function} log
  * @param {string} threeDS - 'pixxles-ga' | 'pixxles-dna' | 'paay-combined' | 'paay-old'
- * @param {string} pageName - 'index' | 'checkout' | 'order'
+ * @param {string} pageName - 'index' | 'checkout' | 'order' |  'qualify'
  */
 module.exports = async function testThreeDS(page, log, threeDS, pageName) {
     async function checkProcPopup(expect = true) {
@@ -100,7 +100,7 @@ module.exports = async function testThreeDS(page, log, threeDS, pageName) {
 
     // --- Pixxles GA ---
     if (threeDS === 'pixxles-ga') {
-        if (pageName === 'index') {
+        if (pageName === 'index' || pageName === 'qualify') {
             await checkProcPopup();
             await checkOptionVar(['browserData', 'dnaThreeDS'], false);
         }
@@ -118,7 +118,7 @@ module.exports = async function testThreeDS(page, log, threeDS, pageName) {
 
     // --- Pixxles DNA ---
     else if (threeDS === 'pixxles-dna') {
-        if (pageName === 'index') {
+        if (pageName === 'index' || pageName === 'qualify') {
             await checkProcPopup();
             await checkOptionVar(['dnaThreeDS'], true);
         }
@@ -136,7 +136,7 @@ module.exports = async function testThreeDS(page, log, threeDS, pageName) {
 
     // --- PAAY combinedRequest ---
     else if (threeDS === 'paay-combined') {
-        if (pageName === 'index') {
+        if (pageName === 'index' || pageName === 'qualify') {
             await checkProcPopup(false);
             await checkOptionVar(['dnaThreeDS', 'browserData'], false);
         }
@@ -155,7 +155,7 @@ module.exports = async function testThreeDS(page, log, threeDS, pageName) {
 
     // --- PAAY old ---
     else if (threeDS === 'paay-old') {
-        if (pageName === 'index') {
+        if (pageName === 'index' || pageName === 'qualify') {
             await checkProcPopup(false);
             await checkOptionVar(['dnaThreeDS', 'browserData'], false);
         }

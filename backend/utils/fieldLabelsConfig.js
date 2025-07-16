@@ -168,7 +168,7 @@ module.exports = {
         zipCode: {label: 'PLZ:', placeholder: 'PLZ*', type: 'text'},
         city: {label: 'Stadt:', placeholder: 'Stadt*', type: 'text'},
         state: {label: 'Bundesland:', placeholder: 'Bundesland auswählen', type: 'select'}, // select
-        country: {label: '', placeholder: '', type: 'select'}, // select
+        country: {label: 'Land:', placeholder: '', type: 'select'}, // select
     },
 
     ch_de: {
