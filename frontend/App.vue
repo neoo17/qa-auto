@@ -233,6 +233,12 @@
                     <pre>{{ JSON.stringify(info.data, null, 2) }}</pre>
                   </div>
                 </template>
+                <template v-else-if="info._section === 'Checkout POST ajax/add-order-3ds-key'">
+                  <div>
+                    <b>Checkout POST ajax/add-order-3ds-key</b>
+                    <pre>{{ JSON.stringify(info.data, null, 2) }}</pre>
+                  </div>
+                </template>
                 <template v-else>
                   {{ info }}
                 </template>

@@ -1,27 +1,50 @@
 const shot = require('../utils/screenshotHelper');
 
 function getExpectedUpsale({ upsales, profile, upsaleIndex, page }) {
-    if (upsaleIndex === 1 && profile?.product?.quantity) {
-        const upgradeName = `-upgrade-${profile.product.quantity}`;
-        const found = upsales.find(u => u.name && u.name.includes(upgradeName));
-        if (found) return found;
-    }
+    // 1. Получаем sku из URL
     let url = page.url();
     let match = url.match(/upsale-(\d+)\.html/);
     let skuFromUrl = match ? match[1] : null;
-    if (skuFromUrl) {
-        const foundBySku = upsales.find(u => String(u.sku) === skuFromUrl);
-        if (foundBySku) return foundBySku;
+
+    // 2. Находим апсейл по sku (если есть)
+    let foundBySku = skuFromUrl ? upsales.find(u => String(u.sku) === skuFromUrl) : null;
+
+    // 3. Проверяем, апгрейд ли это (по name)
+    const isUpgrade = foundBySku && foundBySku.name && foundBySku.name.includes('upgrade');
+
+    // 4. Если это апгрейд — ищем среди upsales апгрейд с нужным quantity как у основного продукта!
+    if (isUpgrade && profile?.product?.quantity) {
+        // Собираем часть имени для поиска, как "upgrade-<quantity>"
+        const upgradeNamePart = `upgrade-${profile.product.quantity}`;
+        const upgradeByQuantity = upsales.find(u =>
+            u.name && u.name.includes('upgrade') && u.name.endsWith(upgradeNamePart)
+        );
+        if (upgradeByQuantity) {
+            return upgradeByQuantity;
+        }
     }
+
+    // 5. Если не апгрейд, возвращаем найденный по sku (обычный кейс)
+    if (foundBySku) {
+        return foundBySku;
+    }
+
+    // 6. Если ничего не нашли, возвращаем по индексу
     return upsales[upsaleIndex - 1] || null;
 }
+
+
 
 async function compareTitle({ page, expectedUpsale, upsaleIndex, log }) {
     let expectedTitle = expectedUpsale?.templates?.title || '';
     let titleStripped = expectedTitle.replace(/Upsell|Upgrade/gi, '').trim().toLowerCase();
     let actualTitle = (await page.title() || '').replace(/Upsell|Upgrade/gi, '').trim().toLowerCase();
+
+    // ВНИМАНИЕ: именно по имени апсейла, а не по индексу!
+    const isUpgrade = expectedUpsale?.name && expectedUpsale.name.includes('upgrade');
+
     log(`--- [Сравнение апсейла #${upsaleIndex}] ---`);
-    log(`Тип апсейла: ${upsaleIndex === 1 ? 'UPGRADE' : 'ОБЫЧНЫЙ'}`);
+    log(`Тип апсейла: ${isUpgrade ? 'UPGRADE' : 'ОБЫЧНЫЙ'}`);
     log(`Ожидаемый TITLE: "${titleStripped}"`);
     log(`Фактический TITLE (из страницы): "${actualTitle}"`);
     if (expectedUpsale && actualTitle !== titleStripped) {
@@ -32,6 +55,7 @@ async function compareTitle({ page, expectedUpsale, upsaleIndex, log }) {
         log(`❌ [Check][#${upsaleIndex}] Не нашли апсейл для сравнения!`);
     }
 }
+
 
 // ВАЖНО: сюда теперь передаём partner
 function compareSku({ expectedUpsale, postDataParsed, upsaleIndex, log, sendTestInfo, action, partner }) {

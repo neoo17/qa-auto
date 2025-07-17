@@ -18,6 +18,7 @@ const shot = require('../utils/screenshotHelper');
 const testThreeDS = require('../utils/testThreeDS');
 const testGdprBlockAdvanced = require("../utils/testGdprBlockAdvanced");
 const checkOnPage = require("../utils/checkOnPage");
+const checkPunctuation = require("../utils/checkPunctuation");
 
 module.exports = async function shortMobile(
     page, log, context, url, country, custom, sendPerf, sendTestInfo, screenshotDir, firstState
@@ -30,6 +31,7 @@ module.exports = async function shortMobile(
     const stateData2 = await firstState;
 
     if (custom.checkType === 'full') {
+        await checkPunctuation(page, log, country);
         await testGdprBlockAdvanced(page, log, country, custom.partner, "checkout");
         await checkAllPopups(page, log, custom.partner, "qualify");
     }
@@ -48,6 +50,7 @@ module.exports = async function shortMobile(
     }
     const stateData3 = await chooseStatePromise;
     if (custom.checkType === 'full') {
+        await checkPunctuation(page, log, country);
         await testGdprBlockAdvanced(page, log, country, custom.partner, "checkout");
         await checkAllPopups(page, log, custom.partner, "choose");
     }
@@ -65,6 +68,7 @@ module.exports = async function shortMobile(
 
     log('=== Полученная страна: ' + country);
     if (custom.checkType === 'full') {
+        await checkPunctuation(page, log, country);
         await testGdprBlockAdvanced(page, log, country, custom.partner, "checkout");
         await checkAllPopups(page, log, custom.partner, "shipping");
     }
@@ -84,6 +88,7 @@ module.exports = async function shortMobile(
 
     const stateData5 = await checkoutStatePromise;
     if (custom.checkType === 'full') {
+        await checkPunctuation(page, log, country);
         await testGdprBlockAdvanced(page, log, country, custom.partner, "checkout");
         await checkAllPopups(page, log, custom.partner, "checkout");
     }

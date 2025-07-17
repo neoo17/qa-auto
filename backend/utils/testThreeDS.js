@@ -21,7 +21,11 @@ module.exports = async function testThreeDS(page, log, threeDS, pageName) {
         const scripts = await page.$$eval('head script', arr => arr.map(x => x.textContent || ''));
         const found = scripts.find(txt => txt.includes('var options=') || txt.includes('var options ='));
         if (!found) {
-            log(`❌ [${threeDS}] Не найден <script> с var options на ${pageName}`);
+            for (const key of keys) {
+                log(expectExist
+                    ? `❌ [${threeDS}] options.${key} отсутствует или false (script с options не найден)`
+                    : `✅ [${threeDS}] options.${key} отсутствует (script с options не найден)`);
+            }
             return;
         }
         let options = {};

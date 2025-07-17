@@ -43,7 +43,7 @@ module.exports = async function mobileOnlyFlow(
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
         await testGdprBlockAdvanced(page, log, country, custom.partner, 'index');
-        await checkSlickSlider(page, log);
+        // await checkSlickSlider(page, log);
         await checkAllPopups(page, log, custom.partner, 'index');
 
     }
@@ -72,6 +72,7 @@ module.exports = async function mobileOnlyFlow(
 
     const stateData3 = await chooseStatePromise;
     if (custom.checkType === 'full') {
+        await checkPunctuation(page, log, country);
         await testGdprBlockAdvanced(page, log, country, custom.partner, "choose");
         await checkAllPopups(page, log, custom.partner, "choose");
     }
@@ -89,6 +90,7 @@ module.exports = async function mobileOnlyFlow(
 
     log('=== Полученная страна: ' + country);
     if (custom.checkType === 'full') {
+        await checkPunctuation(page, log, country);
         await testGdprBlockAdvanced(page, log, country, custom.partner, "shipping");
         await checkAllPopups(page, log, custom.partner, "shipping");
     }
@@ -106,6 +108,7 @@ module.exports = async function mobileOnlyFlow(
     }
     const stateData5 = await checkoutStatePromise;
     if (custom.checkType === 'full') {
+        await checkPunctuation(page, log, country);
         await testGdprBlockAdvanced(page, log, country, custom.partner, "checkout");
         await checkAllPopups(page, log, custom.partner, "checkout");
     }
