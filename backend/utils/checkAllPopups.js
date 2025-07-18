@@ -70,7 +70,7 @@ module.exports = async function checkAllPopups(page, log, partner, pageName) {
         await link.click({ force: true });
         const modalAppeared = await page.waitForSelector('.modal:visible, .modal[style*="display: block"]', { timeout: 5000 }).catch(() => null);
         if (!modalAppeared) {
-            log(`❌[${pageName}] Попап "${text}" не открылся за 5 секунд, идём дальше`);
+            log(`❌[${pageName}]При клике попап "${text}" не открылся!`);
             continue;
         }
         log(`⏳[${pageName}] Ждём 1.2 секунды после открытия попапа`);
