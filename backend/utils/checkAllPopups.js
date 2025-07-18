@@ -68,7 +68,11 @@ module.exports = async function checkAllPopups(page, log, partner, pageName) {
         const text = await link.evaluate(el => el.textContent.trim());
         log(`🖱[${pageName}] Открываем попап по ссылке: "${text}"`);
         await link.click({ force: true });
-        await page.waitForSelector('.modal:visible, .modal[style*="display: block"]', { timeout: 5000 });
+        const modalAppeared = await page.waitForSelector('.modal:visible, .modal[style*="display: block"]', { timeout: 5000 }).catch(() => null);
+        if (!modalAppeared) {
+            log(`❌[${pageName}] Попап "${text}" не открылся за 5 секунд, идём дальше`);
+            continue;
+        }
         log(`⏳[${pageName}] Ждём 1.2 секунды после открытия попапа`);
         await page.waitForTimeout(1200);
 
@@ -86,7 +90,9 @@ module.exports = async function checkAllPopups(page, log, partner, pageName) {
             await closeBtn.click();
             log(`⏳[${pageName}] Ждём 1.5 секунды после закрытия попапа`);
             await page.waitForTimeout(1500);
-            await page.waitForSelector('.modal:visible, .modal[style*="display: block"]', { state: 'hidden', timeout: 3000 });
+            await page.waitForSelector('.modal:visible, .modal[style*="display: block"]', { state: 'hidden', timeout: 3000 })
+                .catch(() => log(`❌[${pageName}] Попап "${text}" не закрылся за 3 секунды (или уже закрыт)`));
+
             log(`✅[${pageName}] Попап успешно закрылся`);
         } else {
             log(`❌[${pageName}] Не найдена кнопка .close-modal внутри попапа`);
