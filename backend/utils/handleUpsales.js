@@ -103,6 +103,7 @@ module.exports = async function handleUpsales(
     const compareUpsales = (firstUpsaleState && firstUpsaleState.upsales) ? firstUpsaleState.upsales : [];
     const compareProfile = (firstUpsaleState && firstUpsaleState.profile) ? firstUpsaleState.profile : {};
     const isDnaLike = partner === 'dnav3' || partner === 'newdna';
+    let prevUrl
 
     while (upsaleIndex < maxUpsales) {
         let currentUrl = page.url();
@@ -244,6 +245,7 @@ module.exports = async function handleUpsales(
             }
 
             log(`🖱️ Кликаю по кнопке ${action === 1 ? 'YES' : 'NO'} на апсейле #${upsaleIndex}`);
+            prevUrl = page.url();
             await btnHandle.click();
 
             // Если DNA и NO — сразу идём дальше, не ждём стейтов, не ловим request!
@@ -290,8 +292,19 @@ module.exports = async function handleUpsales(
         log(`✔️ Upsale #${upsaleIndex}: ${isYes ? 'Купили' : 'Отклонили'}`);
         log(`--------------------------`);
 
-        await page.waitForTimeout(350);
-        const afterUrl = page.url();
+        let afterUrl = prevUrl;
+
+        try {
+            await page.waitForFunction(
+                url => location.href !== url,
+                prevUrl,
+                { timeout: 3000 }
+            );
+            afterUrl = page.url();
+        } catch {
+            afterUrl = page.url();
+        }
+
 
         if (/confirmation\.html/i.test(afterUrl)) {
             try {
@@ -304,7 +317,6 @@ module.exports = async function handleUpsales(
                 log('⚠️ Не удалось поймать state на confirmation!');
             }
             log('➡️ Переход на confirmation');
-            break;
         }
 
         upsaleIndex++;
