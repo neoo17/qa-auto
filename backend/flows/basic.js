@@ -68,7 +68,7 @@ module.exports = async function Basic(
     log('📝 Проверяем наличие объединенной формы #shipping...');
     await page.waitForSelector('form#shipping', { timeout: 7000 });
 
-    await checkCombinedShippingForm(page, log, country, custom.partner);
+    const buttonName = await checkCombinedShippingForm(page, log, country, custom.partner);
     
     log('✅ Проверка главной страницы с формой shipping завершена');
 
@@ -79,9 +79,7 @@ module.exports = async function Basic(
     log('➡️ Переход на order');
     const orderStatePromise = checkStateAjax(page, log);
 
-    if (await checkOnPage(page, 'index.html')) {
-        await page.click('form#shipping button[type="submit"]');
-    }
+    await page.click(buttonName);
 
     const stateData3 = await orderStatePromise;
 
