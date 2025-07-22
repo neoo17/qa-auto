@@ -8,11 +8,20 @@ module.exports = async function checkChoosePackages(page, products, log) {
     log('──────────────────────────────');
     log('➡️ Сравниваем цены с AirTable');
 
-    // Собираем только реальные пакеты (div, не span!)
-    const packageElements = await page.$$('.packages .package');
+    // Собираем только реальные пакеты: либо .package, либо .product.productN
+    const packageElements = await page.$$('.package, .product');
     const realPackages = [];
     for (const el of packageElements) {
-        if (await el.evaluate(el => el.tagName.toLowerCase() === 'div')) realPackages.push(el);
+        if (await el.evaluate(el => el.tagName.toLowerCase() === 'div')) {
+            const classStr = await el.getAttribute('class') || '';
+            // .package (старый вариант) или .product1/.product2/.product3 (новый вариант)
+            if (
+                classStr.includes('package') ||
+                /product\d+/.test(classStr)
+            ) {
+                realPackages.push(el);
+            }
+        }
     }
 
     if (!Array.isArray(products) || !products.length) {
@@ -37,20 +46,37 @@ module.exports = async function checkChoosePackages(page, products, log) {
         return null;
     }
 
+    // Определяем id пакета для лога: data-order-type или класс .productN
+    async function getPackageIdentifier(pkgEl, idx) {
+        const orderType = await pkgEl.getAttribute('data-order-type');
+        if (orderType) return `data-order-type="${orderType}"`;
+
+        // Пробуем найти класс productN
+        const classStr = await pkgEl.getAttribute('class') || '';
+        const match = classStr.match(/product(\d+)/);
+        if (match) return `class="product${match[1]}"`;
+
+        // Если ничего нет — просто порядковый номер (fallback)
+        return `#${idx + 1}`;
+    }
+
+    let found = false;
     for (let i = 0; i < realPackages.length; i++) {
         const pkgEl = realPackages[i];
-        const orderType = await pkgEl.getAttribute('data-order-type');
+        const pkgId = await getPackageIdentifier(pkgEl, i);
+
         const stateProduct = products[i];
-        const quantity = stateProduct?.quantity || orderType;
+        const quantity = stateProduct?.quantity || (pkgId.match(/\d+/)?.[0] ?? (i + 1));
 
         const priceText = await getTextByClasses(pkgEl, ['.price', '.price-hard', '.price-custom']);
         const retailText = await getTextByClasses(pkgEl, ['.retail-price', '.retail-price-hard']);
         const saveText = await getTextByClasses(pkgEl, ['.save-price', '.save-price-hard']);
 
-        log(`📦 Проверяем пакет с data-order-type="${orderType}" (products[${i}])`);
+        log(`📦 Проверяем пакет #${i + 1} (${pkgId})`);
+        found = true;
 
         if (!stateProduct) {
-            log(`❌ В state нет продукта для пакета #${i} (data-order-type="${orderType}")`);
+            log(`❌ В state нет продукта для пакета #${i} (${pkgId})`);
             log('---');
             continue;
         }
@@ -95,5 +121,9 @@ module.exports = async function checkChoosePackages(page, products, log) {
         log('---');
     }
 
-    log('✔️ Проверка всех пакетов завершена');
+    if (!found) {
+        log('❌ Не найдено ни одного блока с пакетами на странице!');
+    } else {
+        log('✔️ Проверка всех пакетов завершена');
+    }
 };

@@ -16,6 +16,10 @@ const testThreeDS = require('../utils/testThreeDS');
 const checkPunctuation = require('../utils/checkPunctuation');
 const testGdprBlockAdvanced = require("../utils/testGdprBlockAdvanced");
 const checkCombinedShippingForm = require('../utils/checkCombinedShippingForm');
+const checkOnPage = require("../utils/checkOnPage");
+const checkCheckoutForm = require("../utils/checkCheckoutForm");
+const chooseProductByCustomParam = require("../utils/chooseProductByCustomParam");
+const checkChoosePackages = require("../utils/checkChoosePackages");
 
 /**
  * Десктопный флоу с объединенной формой shipping
@@ -33,18 +37,15 @@ module.exports = async function Basic(
     page, log, context, url, country, custom, sendPerf, sendTestInfo, screenshotDir, firstState
 ) {
     ensureDirSync(screenshotDir);
-    
-    // Устанавливаем десктопное разрешение
+
     await page.setViewportSize({ width: 1280, height: 800 });
 
     log('🖥️ Десктопный режим включен');
     log('🔵 Открываем страницу...');
 
-    // --- Открываем первую страницу ---
     await page.goto(url, { waitUntil: 'load' });
     const mainStatePromise = firstState || checkStateAjax(page, log);
-    
-    // --- Index с объединенной формой shipping ---
+
     await shot(page, screenshotDir, 'index', log);
 
     const stateData = await mainStatePromise;
@@ -56,8 +57,7 @@ module.exports = async function Basic(
     await testThreeDS(page, log, custom.threeDS, 'index');
     await checkPageTitleMatchesState(page, stateData, log, "index");
     if (typeof sendPerf === 'function') await collectPerfStats(page, 'main', sendPerf);
-    
-    // Проверка пробелов перед спецсимволами в зависимости от локали
+
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
         await testGdprBlockAdvanced(page, log, country, custom.partner, 'index');
@@ -65,12 +65,39 @@ module.exports = async function Basic(
         await checkAllPopups(page, log, custom.partner, 'index');
     }
 
-    // Проверяем наличие объединенной формы shipping
     log('📝 Проверяем наличие объединенной формы #shipping...');
     await page.waitForSelector('form#shipping', { timeout: 7000 });
-    
-    // Проверяем поля формы (объединенные поля из qualify и shipping)
+
     await checkCombinedShippingForm(page, log, country, custom.partner);
     
     log('✅ Проверка главной страницы с формой shipping завершена');
+
+
+
+    // --- Order ---
+    log('──────────────────────────────');
+    log('➡️ Переход на order');
+    const orderStatePromise = checkStateAjax(page, log);
+
+    if (await checkOnPage(page, 'index.html')) {
+        await page.click('form#shipping button[type="submit"]');
+    }
+
+    const stateData3 = await orderStatePromise;
+
+    await chooseProductByCustomParam(page, log, custom, sendTestInfo, stateData3.data.products);
+
+    if (custom.checkType === 'full') {
+        await checkPunctuation(page, log, country);
+        await testGdprBlockAdvanced(page, log, country, custom.partner, "order");
+        await checkAllPopups(page, log, custom.partner, "order");
+    }
+    await checkPageTitleMatchesState(page, stateData3, log, "order");
+    await testThreeDS(page, log, custom.threeDS, 'order');
+    if (typeof sendPerf === 'function') await collectPerfStats(page, 'order', sendPerf);
+    await shot(page, screenshotDir, 'order', log);
+    await checkChoosePackages(page, stateData3.data.products, log);
+    await checkCheckoutForm(page, log, sendTestInfo, checkStateAjax, custom.checkType);
+
+    return stateData3;
 };

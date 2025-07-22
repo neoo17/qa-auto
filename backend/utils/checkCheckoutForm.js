@@ -34,6 +34,28 @@ module.exports = async function checkCheckoutForm(page, log, sendTestInfo, check
         log('⚠️ Loader не исчез за 12 секунд! Жмём кнопку в любом случае.');
     }
 
+    // Универсальная функция для клика по submit-кнопке на форме чекаута
+    async function clickCheckoutSubmit(page, log) {
+        const selectors = [
+            'form#checkout button[type="submit"]',
+            'form#checkout input[type="submit"]',
+            '#checkout button[type="submit"]',
+            '#checkout input[type="submit"]',
+            '#checkout button',
+            '#checkout input[type="submit"]'
+        ];
+        for (const sel of selectors) {
+            const el = await page.$(sel);
+            if (el) {
+                log(`✔️ Найден элемент для отправки: ${sel}`);
+                await el.click();
+                return true;
+            }
+        }
+        log('❌ Не найден элемент для отправки формы!');
+        throw new Error('Не найден элемент для отправки формы!');
+    }
+
     // Попап закрываем только 1 раз за весь тест
     async function closeDeclinePopupIfVisible(page) {
         if (declinePopupWasClosed) return;
@@ -83,7 +105,7 @@ module.exports = async function checkCheckoutForm(page, log, sendTestInfo, check
             page.waitForResponse(res =>
                 res.url().includes('/add-order-3ds-key') && res.request().method() === 'POST', { timeout: 5000 }
             ).catch(() => null),
-            page.click('form#checkout button[type="submit"]')
+            clickCheckoutSubmit(page, log)
         ]);
         retryResponse = resp3ds || resp;
     } catch (e) {
@@ -134,7 +156,7 @@ module.exports = async function checkCheckoutForm(page, log, sendTestInfo, check
                 res.request().method() === 'POST', { timeout: 7000 }
             ).catch(() => null);
 
-            await page.click('form#checkout button[type="submit"]');
+            await clickCheckoutSubmit(page, log);
 
             const [orderResp, add3dsResp, paay3dsResp] = await Promise.all([
                 orderRespPromise,
@@ -280,7 +302,7 @@ module.exports = async function checkCheckoutForm(page, log, sendTestInfo, check
             timeout: 7000
         }).catch(() => null);
 
-        await page.click('form#checkout button[type="submit"]');
+        await clickCheckoutSubmit(page, log);
 
         const [orderReq, add3dsRequest, ds3Request, ds3Response, upsaleState, nav] = await Promise.all([
             orderReqPromise,
