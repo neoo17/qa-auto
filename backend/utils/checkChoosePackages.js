@@ -70,7 +70,7 @@ module.exports = async function checkChoosePackages(page, products, log) {
 
         const priceText = await getTextByClasses(pkgEl, ['.price', '.price-hard', '.price-custom', '.pricee']);
         const retailText = await getTextByClasses(pkgEl, ['.retail-price', '.retail-price-hard']);
-        const saveText = await getTextByClasses(pkgEl, ['.save-price', '.save-price-hard', '.save-box']);
+        const saveText = await getTextByClasses(pkgEl, ['.save-price', '.save-price-hard']);
 
         log(`📦 Проверяем пакет #${i + 1} (${pkgId})`);
         found = true;
