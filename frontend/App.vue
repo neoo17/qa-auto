@@ -706,6 +706,7 @@ function pageLabel(page) {
   if (page === 'main') return 'Главная'
   if (page === 'qualify') return 'Qualify'
   if (page === 'choose') return 'Choose'
+  if (page === 'order') return 'Order'
   if (page === 'shipping') return 'Shipping'
   if (page === 'checkout') return 'Checkout'
   if (page === 'confirmation') return 'Confirmation'
@@ -745,6 +746,7 @@ async function getScreenshotsReal(test) {
     'choose.png',
     'shipping.png',
     'checkout.png',
+    'order.png',
     'upsale-1.png',
     'upsale-2.png',
     'upsale-3.png',

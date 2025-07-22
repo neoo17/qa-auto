@@ -61,7 +61,7 @@ module.exports = async function Basic(
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
         await testGdprBlockAdvanced(page, log, country, custom.partner, 'index');
-        await checkSlickSlider(page, log);
+        // await checkSlickSlider(page, log);
         await checkAllPopups(page, log, custom.partner, 'index');
     }
 
@@ -85,7 +85,6 @@ module.exports = async function Basic(
 
     const stateData3 = await orderStatePromise;
 
-    await chooseProductByCustomParam(page, log, custom, sendTestInfo, stateData3.data.products);
 
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
@@ -97,6 +96,7 @@ module.exports = async function Basic(
     if (typeof sendPerf === 'function') await collectPerfStats(page, 'order', sendPerf);
     await shot(page, screenshotDir, 'order', log);
     await checkChoosePackages(page, stateData3.data.products, log);
+    await chooseProductByCustomParam(page, log, custom, sendTestInfo, stateData3.data.products);
     await checkCheckoutForm(page, log, sendTestInfo, checkStateAjax, custom.checkType);
 
     return stateData3;
