@@ -1,5 +1,6 @@
 module.exports = async function checkPageTitleMatchesState(page, stateData, log, pageName = '') {
     const expectedTitle = stateData?.data?.templates?.title?.trim();
+    const expectedDescription = stateData?.data?.templates?.description?.trim();
 
     if (!expectedTitle) {
         log(`❌ [${pageName}] Тайтл из state не найден!`);
@@ -16,4 +17,16 @@ module.exports = async function checkPageTitleMatchesState(page, stateData, log,
     }
 
     log(`✅ [${pageName}] Title совпадает!`);
+
+    const actualDescription = await page.$eval('meta[name="description"]', el => el.content.trim()).catch(() => null);
+
+    if (actualDescription !== null && typeof expectedTitle === 'string') {
+        log(`🌐 [${pageName}] Description страницы: "${actualDescription}"`);
+        log(`📦 [${pageName}] Description из state: "${expectedTitle}"`);
+        if (actualDescription !== expectedTitle) {
+            log(`❌ [${pageName}] Description не совпадает!\nОжидалось: "${expectedTitle}"\nПолучено: "${actualDescription}"`);
+            return;
+        }
+        log(`✅ [${pageName}] Description совпадает!`);
+    }
 };
