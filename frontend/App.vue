@@ -415,7 +415,7 @@ const countryOptions = [
   { value: 'il', label: 'IL', flags: [flag('il')] },
   { value: 'za', label: 'ZA', flags: [flag('za')] },
   { value: 'sg', label: 'SG', flags: [flag('sg')] },
-  { value: 'uk', label: 'UK', flags: [flag('gb')] },
+  { value: 'gb', label: 'UK', flags: [flag('gb')] },
   { value: 'ie', label: 'IE', flags: [flag('ie')] },
   { value: 'fr', label: 'FR', flags: [flag('fr')] },
   // Двойной флаг: CA (fr) — Канада и Франция
@@ -694,10 +694,16 @@ watch(
 
 function extractGeoFromUrl(url) {
   const m = url.match(/\/([a-z]{2}(?:-[a-z]{2})?)-v\d+/i);
-  if (m) return m[1].replace('-', '_').toLowerCase();
-  const intl = url.match(/\/intl-([a-z]{2}(?:-[a-z]{2})?)-v\d+/i);
-  if (intl) return intl[1].replace('-', '_').toLowerCase();
-  return null;
+  let geo = null;
+  if (m) geo = m[1];
+  else {
+    const intl = url.match(/\/intl-([a-z]{2}(?:-[a-z]{2})?)-v\d+/i);
+    if (intl) geo = intl[1];
+  }
+  if (!geo) return null;
+  geo = geo.replace('-', '_').toLowerCase();
+  if (geo === 'uk') return 'gb';
+  return geo;
 }
 
 

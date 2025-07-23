@@ -93,7 +93,7 @@ module.exports = {
         country:   { label: 'Country:',    placeholder: '',            type: 'select' }, // select
     },
 
-    uk: {
+    gb: {
         firstName: { label: 'Name:', placeholder: 'Name*', type: 'text' },
         lastName:  { label: 'Surname:',  placeholder: 'Surname*',  type: 'text' },
         email:     { label: 'Email:',      placeholder: 'Email*',      type: 'email' },

@@ -23,6 +23,20 @@ module.exports = async function checkShippingForm(page, log, countryCode) {
                 ? `form#shipping-mobile select[name="${name}"]`
                 : `form#shipping-mobile input[name="${name}"]`;
 
+
+            if (isSelect && name === 'country') {
+                try {
+                    const selectedValue = await page.$eval(inputSel, el => el.value);
+                    if ((selectedValue || '').toLowerCase() === (countryCode || '').toLowerCase()) {
+                        log(`✅ [${name}] выбрано правильное значение: "${selectedValue}"`);
+                    } else {
+                        log(`❌ [${name}] выбрано неверное значение! Ожидали: "${countryCode}", получили: "${selectedValue}"`);
+                    }
+                } catch {
+                    log(`❌ [${name}] не удалось получить выбранное значение`);
+                }
+            }
+
             const isVisible = await page.$eval(inputSel, el => {
                 const style = window.getComputedStyle(el);
                 return style.display !== 'none' && style.visibility !== 'hidden' && el.offsetParent !== null;

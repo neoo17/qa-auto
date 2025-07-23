@@ -33,7 +33,7 @@ module.exports = async function testGdprBlockAdvanced(page, log, geo, partner, p
 
     const shouldHaveGdpr =
         GDPR_GEO.includes(geoLower) ||
-        (geoLower === 'uk' && GDPR_GEO_UK_PARTNERS.includes(String(partner)));
+        (geoLower === 'gb' && GDPR_GEO_UK_PARTNERS.includes(String(partner)));
 
     const gdprBox = await page.$('.gdpr__box');
     const isVisible = gdprBox ? await gdprBox.isVisible().catch(() => false) : false;

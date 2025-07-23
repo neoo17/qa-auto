@@ -75,6 +75,19 @@ module.exports = async function checkCombinedShippingForm(page, log, countryCode
             continue;
         }
 
+        if (isSelect && name === 'country') {
+            try {
+                const selectedValue = await page.$eval(inputSel, el => el.value);
+                if ((selectedValue || '').toLowerCase() === (countryCode || '').toLowerCase()) {
+                    log(`✅ [${name}] выбрано правильное значение: "${selectedValue}"`);
+                } else {
+                    log(`❌ [${name}] выбрано неверное значение! Ожидали: "${countryCode}", получили: "${selectedValue}"`);
+                }
+            } catch {
+                log(`❌ [${name}] не удалось получить выбранное значение`);
+            }
+        }
+
         // Проверяем видимость поля
         const isVisible = await page.$eval(inputSel, el => {
             const style = window.getComputedStyle(el);

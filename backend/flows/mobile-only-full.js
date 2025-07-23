@@ -90,6 +90,7 @@ module.exports = async function mobileOnlyFlow(
     const stateData4 = await shippingStatePromise;
 
     log('=== Полученная страна: ' + country);
+
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
         await testGdprBlockAdvanced(page, log, country, custom.partner, "shipping");

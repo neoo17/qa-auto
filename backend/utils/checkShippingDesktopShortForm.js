@@ -75,6 +75,21 @@ module.exports = async function checkShippingDesktopShortForm(page, log, country
             continue;
         }
 
+
+
+        if (isSelect && name === 'shippingCountry') {
+            try {
+                const selectedValue = await page.$eval(inputSel, el => el.value);
+                if ((selectedValue || '').toLowerCase() === (countryCode || '').toLowerCase()) {
+                    log(`✅ [${name}] выбрано правильное значение: "${selectedValue}"`);
+                } else {
+                    log(`❌ [${name}] выбрано неверное значение! Ожидали: "${countryCode}", получили: "${selectedValue}"`);
+                }
+            } catch {
+                log(`❌ [${name}] не удалось получить выбранное значение`);
+            }
+        }
+
         // Проверяем видимость
         const isVisible = await element.evaluate(el => {
             const style = window.getComputedStyle(el);
@@ -144,9 +159,9 @@ module.exports = async function checkShippingDesktopShortForm(page, log, country
             try {
                 const optionText = await element.$eval('option', el => el.textContent.trim());
                 if (optionText !== placeholder) {
-                    log(`❌ [select ${name}] Первый option (placeholder) — ожидали "${placeholder}", получили: "${optionText}"`);
+                    log(`❌ [select ${name}]  Placeholder для state — ожидали "${placeholder}", получили: "${optionText}"`);
                 } else {
-                    log(`✅ [select ${name}] Первый option совпадает: "${optionText}"`);
+                    log(`✅ [select ${name}] Placeholder для state: "${optionText}"`);
                 }
             } catch {
                 log(`ℹ️ Не удалось получить первый option для "${name}"`);
