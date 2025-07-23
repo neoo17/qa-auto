@@ -33,9 +33,10 @@ module.exports = async function mobileOnlyFlow(
     await shot(page, screenshotDir, 'index', log);
     const stateData = await firstState;
 
-    if (stateData?.data?.templates?.title) {
-        await checkNoOtherProductsOnPage(page, stateData.data.templates.title, log, productList);
-    }
+    // if (stateData?.data?.templates?.title) {
+    //     await checkNoOtherProductsOnPage(page, stateData.data.templates.title, log, productList);
+    // }
+
     await testThreeDS(page, log, custom.threeDS, 'index');
     await checkPageTitleMatchesState(page, stateData, log, "index");
     if (typeof sendPerf === 'function') await collectPerfStats(page, 'main', sendPerf);

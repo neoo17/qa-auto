@@ -23,7 +23,7 @@ module.exports = async function routerFlow(page, log, context, url, country, cus
         return;
     }
     if (await page.$('form#checkout') !== null) {
-        stateData = await shortDesktop(page, log, context, url, country, custom, sendPerf, sendTestInfo, screenshotDir);
+        stateData = await shortDesktop(page, log, context, url, country, custom, sendPerf, sendTestInfo, screenshotDir, firstState);
         await continueFlowAfterQualify(page, log, country, custom, sendPerf, sendTestInfo, screenshotDir, stateData);
         return;
     }

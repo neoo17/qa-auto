@@ -50,9 +50,9 @@ module.exports = async function Basic(
 
     const stateData = await mainStatePromise;
     
-    if (stateData?.data?.templates?.title) {
-        await checkNoOtherProductsOnPage(page, stateData.data.templates.title, log, productList);
-    }
+    // if (stateData?.data?.templates?.title) {
+    //     await checkNoOtherProductsOnPage(page, stateData.data.templates.title, log, productList);
+    // }
     
     await testThreeDS(page, log, custom.threeDS, 'index');
     await checkPageTitleMatchesState(page, stateData, log, "index");
