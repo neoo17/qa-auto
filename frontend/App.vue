@@ -335,20 +335,26 @@
               <b>Дальше идут цифры для каждого апсейла:</b>
               <ul>
                 <li>
-                  <code>1</code> — <span style="color:#2abf2a;font-weight:600">Покупаем</span> апсейл ("Yes")
+                  <code>1</code> — <span style="color:#2abf2a;font-weight:600">Покупаем</span> апсейл ("Yes") по <b>первому видимому</b> <code>a.button__yes</code>
                 </li>
                 <li>
-                  <code>0</code> — <span style="color:#c82d2d;font-weight:600">Отклоняем</span> апсейл ("No")
+                  <code>2</code> — <span style="color:#2abf2a;font-weight:600">Покупаем</span> апсейл ("Yes") по блоку <b>DIV</b>   <code>div.button__yes</code>
+                </li>
+                <li>
+                  <code>3</code> — <span style="color:#2abf2a;font-weight:600">Покупаем</span> апсейл ("Yes") по <b>последнему видимому</b> <code>a.button__yes</code>
+                </li>
+                <li>
+                  <code>0</code> — <span style="color:#c82d2d;font-weight:600">Отклоняем</span> апсейл ("No") <code>a.button__no</code>
                 </li>
               </ul>
             </li>
             <li>
-              <b>Пример:</b> <code>3-1-0-1</code>
+              <b>Пример:</b> <code>3-1-0-2</code>
               <ul>
                 <li>Выбрать <b>3-й пакет</b></li>
-                <li><b>1-й апсейл</b>: купить</li>
-                <li><b>2-й апсейл</b>: отклонить</li>
-                <li><b>3-й апсейл</b>: купить</li>
+                <li><b>1-й апсейл</b>: купить по <b>первому</b> <code>a.button__yes</code></li>
+                <li><b>2-й апсейл</b>: отклонить (No)</li>
+                <li><b>3-й апсейл</b>: купить по <b>последнему</b> <code>div.button__yes</code></li>
               </ul>
             </li>
             <li>
@@ -358,7 +364,15 @@
           <p>
             <b>Финиш:</b> если после апсейлов наступает страница <code>confirmation.html</code>, обработка заканчивается.
           </p>
+          <p>
+            <b>Кратко:</b><br>
+            <code>1</code> — купить по <b>первому</b> <code>a.button__yes</code><br>
+            <code>2</code> — купить по <b>DIV</b> <code>div.button__yes</code><br>
+            <code>3</code> — купить по <b>последнему</b> <code>a.button__yes</code><br>
+            <code>0</code> — отклонить  <code>.button__no</code>
+          </p>
         </div>
+
       </transition>
     </div>
 

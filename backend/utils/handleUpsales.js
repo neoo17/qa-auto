@@ -1,20 +1,15 @@
 const shot = require('../utils/screenshotHelper');
 
 function getExpectedUpsale({ upsales, profile, upsaleIndex, page }) {
-    // 1. Получаем sku из URL
     let url = page.url();
     let match = url.match(/upsale-(\d+)\.html/);
     let skuFromUrl = match ? match[1] : null;
 
-    // 2. Находим апсейл по sku (если есть)
     let foundBySku = skuFromUrl ? upsales.find(u => String(u.sku) === skuFromUrl) : null;
 
-    // 3. Проверяем, апгрейд ли это (по name)
     const isUpgrade = foundBySku && foundBySku.name && foundBySku.name.includes('upgrade');
 
-    // 4. Если это апгрейд — ищем среди upsales апгрейд с нужным quantity как у основного продукта!
     if (isUpgrade && profile?.product?.quantity) {
-        // Собираем часть имени для поиска, как "upgrade-<quantity>"
         const upgradeNamePart = `upgrade-${profile.product.quantity}`;
         const upgradeByQuantity = upsales.find(u =>
             u.name && u.name.includes('upgrade') && u.name.endsWith(upgradeNamePart)
@@ -24,23 +19,18 @@ function getExpectedUpsale({ upsales, profile, upsaleIndex, page }) {
         }
     }
 
-    // 5. Если не апгрейд, возвращаем найденный по sku (обычный кейс)
     if (foundBySku) {
         return foundBySku;
     }
 
-    // 6. Если ничего не нашли, возвращаем по индексу
     return upsales[upsaleIndex - 1] || null;
 }
-
-
 
 async function compareTitle({ page, expectedUpsale, upsaleIndex, log }) {
     let expectedTitle = expectedUpsale?.templates?.title || '';
     let titleStripped = expectedTitle.replace(/Upsell|Upgrade/gi, '').trim().toLowerCase();
     let actualTitle = (await page.title() || '').replace(/Upsell|Upgrade/gi, '').trim().toLowerCase();
 
-    // ВНИМАНИЕ: именно по имени апсейла, а не по индексу!
     const isUpgrade = expectedUpsale?.name && expectedUpsale.name.includes('upgrade');
 
     log(`--- [Сравнение апсейла #${upsaleIndex}] ---`);
@@ -56,8 +46,6 @@ async function compareTitle({ page, expectedUpsale, upsaleIndex, log }) {
     }
 }
 
-
-// ВАЖНО: сюда теперь передаём partner
 function compareSku({ expectedUpsale, postDataParsed, upsaleIndex, log, sendTestInfo, action, partner }) {
     let expectedSku = expectedUpsale?.sku;
     const actualSku = postDataParsed['upsale[]'] || null;
@@ -72,7 +60,7 @@ function compareSku({ expectedUpsale, postDataParsed, upsaleIndex, log, sendTest
     } else {
         log(`❌ [Check][#${upsaleIndex}] SKU не совпал! Ожидали: ${expectedSku}, Фактический (POST): ${actualSku}`);
     }
-    // тут правим:
+
     if (typeof sendTestInfo === 'function') {
         let url;
         if (action === 1) {
@@ -155,20 +143,34 @@ module.exports = async function handleUpsales(
 
         let action = 1;
         if (!buyAll) action = actions[upsaleIndex] ?? 0;
-        let btnSelector = action === 1
-            ? 'a.button__yes:not([style*="display:none"])'
-            : 'a.button__no:not([style*="display:none"])';
 
-        let btnHandle;
+        // --- Новая логика кнопки ---
+        let btnHandle = null;
         try {
-            btnHandle = await page.waitForSelector(btnSelector, { timeout: 6000, state: 'visible' });
+            if (action === 1) {
+                // Купить по первому видимому a.button__yes
+                const yesBtns = await page.$$('a.button__yes:not([style*="display:none"])');
+                if (yesBtns.length) btnHandle = yesBtns[0];
+            } else if (action === 2) {
+                // Купить по последнему видимому div.button__yes
+                const yesBtns = await page.$$('div.button__yes:not([style*="display:none"])');
+                if (yesBtns.length) btnHandle = yesBtns[yesBtns.length - 1];
+            } else if (action === 3) {
+                // Купить по последнему видимому a.button__yes
+                const yesBtns = await page.$$('a.button__yes:not([style*="display:none"])');
+                if (yesBtns.length) btnHandle = yesBtns[yesBtns.length - 1];
+            } else {
+                // Отклонить — по первой видимой a.button__no
+                const noBtns = await page.$$('a.button__no:not([style*="display:none"])');
+                if (noBtns.length) btnHandle = noBtns[0];
+            }
         } catch {
             btnHandle = null;
         }
         if (!btnHandle) {
-            log(`❌ Нет видимой кнопки ${action === 1 ? 'YES' : 'NO'} для апсейла #${upsaleIndex}`);
+            log(`❌ Нет видимой кнопки ${action === 1 || action === 2 || action === 3 ? 'YES' : 'NO'} для апсейла #${upsaleIndex}`);
             if (sendTestInfo) sendTestInfo({
-                error: `Нет видимой кнопки ${action === 1 ? 'YES' : 'NO'} для апсейла #${upsaleIndex}`
+                error: `Нет видимой кнопки ${action === 1 || action === 2 || action === 3 ? 'YES' : 'NO'} для апсейла #${upsaleIndex}`
             });
             break;
         }
@@ -206,9 +208,8 @@ module.exports = async function handleUpsales(
         let postDataParsed = null;
         let expectedUpsale = null;
 
-        // --- ОЖИДАНИЕ ajax + ОЖИДАНИЕ state + КЛИК ---
         let request = null, stateResponse = null;
-        const isYes = action === 1;
+        const isYes = action === 1 || action === 2 || action === 3;
         let requestUrlPart = null;
         if (isYes) {
             requestUrlPart = isDnaLike ? '/upsale' : '/ajax/add-upsale';
@@ -244,11 +245,10 @@ module.exports = async function handleUpsales(
                 );
             }
 
-            log(`🖱️ Кликаю по кнопке ${action === 1 ? 'YES' : 'NO'} на апсейле #${upsaleIndex}`);
+            log(`🖱️ Кликаю по кнопке ${isYes ? 'YES' : 'NO'} на апсейле #${upsaleIndex}`);
             prevUrl = page.url();
             await btnHandle.click();
 
-            // Если DNA и NO — сразу идём дальше, не ждём стейтов, не ловим request!
             if (isDnaLike && !isYes) {
                 log('🟡 [DNA] Отказ (NO) — не ждём /ajax/state, идём дальше');
                 log(`✔️ Upsale #${upsaleIndex}: Отклонили`);
@@ -304,7 +304,6 @@ module.exports = async function handleUpsales(
         } catch {
             afterUrl = page.url();
         }
-
 
         if (/confirmation\.html/i.test(afterUrl)) {
             try {
