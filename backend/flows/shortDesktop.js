@@ -19,6 +19,7 @@ const checkOnPage = require("../utils/checkOnPage");
 const checkCheckoutForm = require("../utils/checkCheckoutForm");
 const chooseProductByCustomParam = require("../utils/chooseProductByCustomParam");
 const checkChoosePackages = require("../utils/checkChoosePackages");
+const checkSelectStateISOLookup = require("../utils/checkSelectStateISOLookup");
 
 /**
  * Десктопный флоу с объединенной формой shipping
@@ -56,6 +57,10 @@ module.exports = async function Basic(
         await checkPunctuation(page, log, country);
         await testGdprBlockAdvanced(page, log, country, custom.partner, 'index');
         await checkAllPopups(page, log, custom.partner, 'index');
+    }
+
+    if (custom.partner === 'ga' || custom.partner === 'gh') {
+        await checkSelectStateISOLookup(page, country, log, 'select[name="shipping_state"]')
     }
     await shot(page, screenshotDir, 'index', log);
 

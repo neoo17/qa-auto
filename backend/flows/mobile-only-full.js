@@ -22,6 +22,7 @@ const testThreeDS = require('../utils/testThreeDS');
 const testGdprBlockAdvanced = require("../utils/testGdprBlockAdvanced");
 const checkOnPage = require("../utils/checkOnPage");
 const checkPunctuation = require("../utils/checkPunctuation");
+const checkSelectStateISOLookup = require("../utils/checkSelectStateISOLookup");
 
 module.exports = async function mobileOnlyFlow(
     page, log, context, url, country, custom, sendPerf, sendTestInfo, screenshotDir, firstState
@@ -97,6 +98,10 @@ module.exports = async function mobileOnlyFlow(
         await checkAllPopups(page, log, custom.partner, "shipping");
     }
     await shot(page, screenshotDir, 'shipping', log);
+
+    if (custom.partner === 'ga' || custom.partner === 'gh') {
+        await checkSelectStateISOLookup(page, country, log, 'select[name="state"]')
+    }
     await checkPageTitleMatchesState(page, stateData4, log, "shipping");
     if (typeof sendPerf === 'function') await collectPerfStats(page, 'shipping', sendPerf);
     await checkShippingForm(page, log, country);

@@ -19,6 +19,7 @@ const testThreeDS = require('../utils/testThreeDS');
 const testGdprBlockAdvanced = require("../utils/testGdprBlockAdvanced");
 const checkOnPage = require("../utils/checkOnPage");
 const checkPunctuation = require("../utils/checkPunctuation");
+const checkSelectStateISOLookup = require("../utils/checkSelectStateISOLookup");
 
 module.exports = async function shortMobile(
     page, log, context, url, country, custom, sendPerf, sendTestInfo, screenshotDir, firstState
@@ -72,6 +73,10 @@ module.exports = async function shortMobile(
         await testGdprBlockAdvanced(page, log, country, custom.partner, "checkout");
         await checkAllPopups(page, log, custom.partner, "shipping");
     }
+    if (custom.partner === 'ga' || custom.partner === 'gh') {
+        await checkSelectStateISOLookup(page, country, log, 'select[name="state"]')
+    }
+
     await shot(page, screenshotDir, 'shipping', log);
     await checkPageTitleMatchesState(page, stateData4, log, "shipping");
     if (typeof sendPerf === 'function') await collectPerfStats(page, 'shipping', sendPerf);

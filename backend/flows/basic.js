@@ -20,6 +20,7 @@ const checkOnPage = require("../utils/checkOnPage");
 const checkCheckoutForm = require("../utils/checkCheckoutForm");
 const chooseProductByCustomParam = require("../utils/chooseProductByCustomParam");
 const checkChoosePackages = require("../utils/checkChoosePackages");
+const checkSelectStateISOLookup = require("../utils/checkSelectStateISOLookup");
 
 /**
  * Десктопный флоу с объединенной формой shipping
@@ -55,6 +56,13 @@ module.exports = async function Basic(
     // }
     
     await testThreeDS(page, log, custom.threeDS, 'index');
+
+    if (custom.partner === 'ga' || custom.partner === 'gh') {
+        await checkSelectStateISOLookup(page, country, log, 'select[name="state"]')
+    }
+
+
+
     await checkPageTitleMatchesState(page, stateData, log, "index");
     if (typeof sendPerf === 'function') await collectPerfStats(page, 'main', sendPerf);
 
