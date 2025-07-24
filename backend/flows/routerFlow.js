@@ -49,14 +49,17 @@ async function continueFlowAfterQualify(
 
         // --- Confirmation ---
         await checkPageTitleMatchesState(page, stateData, log, "confirmation");
+
         if (custom.checkType === 'full' && (custom.partner === 'ga' || custom.partner === 'gh')) {
             await checkAllPopups(page, log, custom.partner, "confirmation");
         }
         await shot(page, screenshotDir, 'confirmation', log);
         await checkConfirmationPage(page, stateData, log);
+
     } else {
         // --- Confirmation ---
         await checkPageTitleMatchesState(page, stateData, log, "confirmation");
+
         if (custom.checkType === 'full' && (custom.partner === 'ga' || custom.partner === 'gh')) {
             await checkAllPopups(page, log, custom.partner, "confirmation");
         }

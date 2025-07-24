@@ -672,7 +672,7 @@ watch(
     }
 )
 
-const IMG_HEAVY_LIMIT = 50 * 500
+const IMG_HEAVY_LIMIT = 200 * 1024
 
 function isImageType(type) {
   return ['image', 'img', 'jpeg', 'png', 'svg+xml', 'gif', 'webp', 'jpg'].some(key => (type || '').toLowerCase().includes(key))
