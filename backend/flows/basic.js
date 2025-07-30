@@ -69,7 +69,6 @@ module.exports = async function Basic(
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
         await testGdprBlockAdvanced(page, log, country, custom.partner, 'index');
-        // await checkSlickSlider(page, log);
         await checkAllPopups(page, log, custom.partner, 'index');
     }
 

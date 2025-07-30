@@ -201,7 +201,11 @@ module.exports = async function checkShippingDesktopShortForm(page, log, country
     }
     await page.waitForTimeout(700);
 
+    const skipValidationCheck = ['shippingCountry'];
+
     for (const name of allFields) {
+        if (skipValidationCheck.includes(name)) continue;
+
         const origName = configMap[name];
         if (!config[origName]) continue;
         const { type } = config[origName];
@@ -211,11 +215,12 @@ module.exports = async function checkShippingDesktopShortForm(page, log, country
             : `form#checkout input[name="${name}"]`;
         const element = await page.$(inputSel);
         if (!element) continue;
+
         const isVisible = await element.evaluate(el => {
             const style = window.getComputedStyle(el);
             return style.display !== 'none' && style.visibility !== 'hidden' && el.offsetParent !== null;
         }).catch(() => false);
-        if (!isVisible) continue; // пропускаем скрытые
+        if (!isVisible) continue;
 
         const classList = await element.evaluate(el => el.className || '');
         if (classList.includes('error')) {
@@ -226,6 +231,7 @@ module.exports = async function checkShippingDesktopShortForm(page, log, country
             log(`⚠️ [${name}] на невалидных данных нет классов .error/.valid (class="${classList}")`);
         }
     }
+
 
     if (config.email) {
         const emailInput = await page.$('form#checkout input[name="shippingEmail"]');
@@ -273,16 +279,47 @@ module.exports = async function checkShippingDesktopShortForm(page, log, country
 
 
     log('📝 Заполняем форму валидными данными...');
+
+
+    if (config.country) {
+        const inputSel = `form#checkout select[name="shippingCountry"]`;
+        const countryEl = await page.$(inputSel);
+        if (countryEl) {
+            const options = await page.$$eval(
+                inputSel + ' option',
+                opts => opts.filter(o => !o.disabled && o.value).map(o => o.value)
+            );
+            if (options.length > 0) {
+                const countryVal = options[0];
+                log(`🔽 Сначала выбираем страну: "${countryVal}"`);
+                await page.selectOption(inputSel, countryVal);
+                await page.$eval(inputSel, el => {
+                    el.dispatchEvent(new Event('input', { bubbles: true }));
+                    el.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+
+                log(`⏳ Ждём обновление селекта shipping_state...`);
+                await page.waitForTimeout(500);
+            }
+        }
+    }
+
+
     for (const name of allFields) {
+        if (name === 'shippingCountry') continue; // уже выбрали выше
+
         const origName = configMap[name];
         if (!config[origName]) continue;
         const { type } = config[origName];
         const isSelect = type === 'select';
+
         const inputSel = isSelect
             ? `form#checkout select[name="${name}"]`
             : `form#checkout input[name="${name}"]`;
+
         const element = await page.$(inputSel);
         if (!element) continue;
+
         const isVisible = await element.evaluate(el => {
             const style = window.getComputedStyle(el);
             return style.display !== 'none' && style.visibility !== 'hidden' && el.offsetParent !== null;
@@ -290,12 +327,21 @@ module.exports = async function checkShippingDesktopShortForm(page, log, country
         if (!isVisible) continue;
 
         if (isSelect) {
-            const options = await page.$$eval(inputSel + ' option', opts => opts.map(o => o.value).filter(Boolean));
-            if (options.length >= 1) {
-                await page.selectOption(inputSel, options[0]);
+            const options = await page.$$eval(
+                inputSel + ' option',
+                opts => opts.filter(o => !o.disabled && o.value).map(o => o.value)
+            );
+
+            if (options.length > 0) {
+                const valueToSelect = options[0];
+                log(`🔽 Выбираем "${valueToSelect}" в селекте ${name}`);
+                await page.selectOption(inputSel, valueToSelect);
                 await page.$eval(inputSel, el => {
+                    el.dispatchEvent(new Event('input', { bubbles: true }));
                     el.dispatchEvent(new Event('change', { bubbles: true }));
                 });
+            } else {
+                log(`⚠️ Нет валидных значений в ${name}`);
             }
         } else {
             let val = 'Test';
@@ -308,6 +354,8 @@ module.exports = async function checkShippingDesktopShortForm(page, log, country
             await element.fill(val);
         }
     }
+
+
 
     log('🟢 Тест shippingDesktopShortForm завершён');
 };

@@ -68,7 +68,6 @@ function cleanLabel(label) {
     return label.replace(/\s*\((SCT|NIR|ENG|WLS)\)\s*$/i, '').trim();
 }
 function cleanRegionName(name) {
-    // Убирает язык в скобках (de), (fr), (it), (rm), (en), (gsw) и др.
     return name.replace(/\s*\(([a-z]{2,4})\)\s*$/i, '').trim();
 }
 

@@ -67,22 +67,43 @@ module.exports = async function testGdprBlockAdvanced(page, log, geo, partner, p
             log('✅ [GDPR] Попап открылся.');
 
             await page.waitForTimeout(1000);
+            await page.waitForTimeout(1000);
             let closed = false;
+
             const closeSelectors = [
-                '.fancybox__close', '.modal .close', '.popup .close', '[aria-label="Close"]'
+                '.fancybox__close',
+                '.modal .close',
+                '.popup .close',
+                '[aria-label="Close"]'
             ];
+
             for (const sel of closeSelectors) {
-                const closeBtn = await page.$(sel);
+                const closeBtn = await page.waitForSelector(sel, { timeout: 2000 }).catch(() => null);
                 if (closeBtn) {
+                    log(`[GDPR] Нашли кнопку закрытия: ${sel}`);
                     await closeBtn.click().catch(() => {});
                     closed = true;
                     break;
                 }
             }
+
             if (!closed) {
+                log('[GDPR] Не нашли кнопку, пробуем кликнуть по фону...');
                 const backdrop = await page.$('.fancybox__backdrop, .modal-backdrop, .popup-backdrop');
-                if (backdrop) await backdrop.click().catch(() => {});
+                if (backdrop) {
+                    await backdrop.click().catch(() => {});
+                    closed = true;
+                }
             }
+
+            await page.waitForTimeout(500);
+
+            if (closed) {
+                log('✅ [GDPR] Попап закрыт.');
+            } else {
+                log('❌ [GDPR] Попап не удалось закрыть!');
+            }
+
             await page.waitForTimeout(300);
             log('✅ [GDPR] Попап закрыт.');
         }
@@ -109,7 +130,28 @@ module.exports = async function testGdprBlockAdvanced(page, log, geo, partner, p
         }
     } else {
         if (gdprBox && isVisible) {
-            log('❌ [GDPR] Блок .gdpr__box есть и видим, хотя не должен!');
+            log('❌ [GDPR] Блок .gdpr__box есть и видим, хотя не должен! Прячем его...');
+
+            const wasHidden = await page.evaluate(() => {
+                const el = document.getElementById('gdpr');
+                if (el) {
+                    el.style.display = 'none';
+                    return true;
+                }
+                const box = document.querySelector('.gdpr__box');
+                if (box) {
+                    box.style.display = 'none';
+                    return true;
+                }
+                return false;
+            });
+
+            if (wasHidden) {
+                log('✅ [GDPR] Блок скрыт');
+            } else {
+                log('❌ [GDPR] Не удалось скрыть блок, элемент не найден!');
+            }
+
         } else {
             log('✅ [GDPR] Блока .gdpr__box нет или он скрыт, всё ок.');
         }
