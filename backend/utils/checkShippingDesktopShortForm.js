@@ -284,7 +284,13 @@ module.exports = async function checkShippingDesktopShortForm(page, log, country
     if (config.country) {
         const inputSel = `form#checkout select[name="shippingCountry"]`;
         const countryEl = await page.$(inputSel);
-        if (countryEl) {
+
+        const isVisible = countryEl ? await countryEl.evaluate(el => {
+            const style = window.getComputedStyle(el);
+            return style.display !== 'none' && style.visibility !== 'hidden' && el.offsetParent !== null;
+        }).catch(() => false) : false;
+
+        if (countryEl && isVisible) {
             const options = await page.$$eval(
                 inputSel + ' option',
                 opts => opts.filter(o => !o.disabled && o.value).map(o => o.value)
@@ -300,9 +306,14 @@ module.exports = async function checkShippingDesktopShortForm(page, log, country
 
                 log(`⏳ Ждём обновление селекта shipping_state...`);
                 await page.waitForTimeout(500);
+            } else {
+                log(`⚠️ В селекте shippingCountry нет доступных значений`);
             }
+        } else {
+            log(`ℹ️ Селект shippingCountry скрыт — пропускаем выбор`);
         }
     }
+
 
 
     for (const name of allFields) {
