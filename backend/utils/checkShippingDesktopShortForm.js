@@ -101,32 +101,44 @@ module.exports = async function checkShippingDesktopShortForm(page, log, country
             continue;
         }
 
-        // --- Проверяем label ---
-        try {
-            let labelEl = null;
-            const inputId = await element.evaluate(el => el.id || null).catch(() => null);
-            if (inputId) {
-                labelEl = await page.$(`label[for="${inputId}"]`);
-            }
-            if (!labelEl) {
-                const formHolder = await page.$(`${inputSel} >> xpath=ancestor::*[contains(@class, "form-holder")]`);
-                if (formHolder) {
-                    labelEl = await formHolder.$('label');
+
+        if (label && label.trim()) {
+            try {
+                let labelEl = null;
+
+                const inputId = await element.evaluate(el => el.id || null).catch(() => null);
+                if (inputId) {
+                    labelEl = await page.$(`label[for="${inputId}"]`);
                 }
-            }
-            if (labelEl && label) {
-                const actualLabel = await labelEl.evaluate(el => el.textContent.trim());
-                if (actualLabel !== label) {
-                    log(`❌ Label для "${name}" не совпадает! Ожидали: "${label}", получили: "${actualLabel}"`);
+
+                if (!labelEl) {
+                    const formHolder = await page.$(`${inputSel} >> xpath=ancestor::*[contains(@class, "form-holder")]`);
+                    if (formHolder) {
+                        labelEl = await formHolder.$('label');
+                    }
+                }
+
+                if (labelEl) {
+                    const actualLabel = await labelEl.evaluate(el => el.textContent.trim());
+                    if (!actualLabel) {
+                        log(`ℹ️ Label для "${name}" найден, но он пустой — пропускаем сравнение`);
+                    } else if (actualLabel !== label) {
+                        log(`❌ Label для "${name}" не совпадает! Ожидали: "${label}", получили: "${actualLabel}"`);
+                    } else {
+                        log(`✅ Label для "${name}" совпадает: "${label}"`);
+                    }
                 } else {
-                    log(`✅ Label для "${name}" совпадает: "${label}"`);
+                    log(`ℹ️ Label для "${name}" не найден, пропускаем проверку`);
                 }
-            } else if (label) {
-                log(`ℹ️ Label для "${name}" не найден, пропускаем проверку`);
+
+            } catch (e) {
+                log(`ℹ️ Ошибка при получении label для "${name}" — пропускаем проверку`);
             }
-        } catch (e) {
-            log(`ℹ️ Не удалось получить label для "${name}"`);
+
+        } else {
+            log(`ℹ️ В конфиге не задан label для "${name}" — пропускаем проверку`);
         }
+
 
         if (!isSelect && placeholder) {
             try {

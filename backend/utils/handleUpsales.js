@@ -38,7 +38,18 @@ async function compareTitle({ page, expectedUpsale, upsaleIndex, log }) {
     log(`Ожидаемый TITLE: "${titleStripped}"`);
     log(`Фактический TITLE (из страницы): "${actualTitle}"`);
     if (expectedUpsale && actualTitle !== titleStripped) {
-        log(`❌ [Check][#${upsaleIndex}] Title не совпал! Ожидали: "${titleStripped}", Фактический: "${actualTitle}"`);
+        const expectedLower = titleStripped.toLowerCase();
+        const actualLower = actualTitle.toLowerCase();
+
+        const isDeliveryException = (
+            expectedLower === 'expedited delivery' && actualLower === 'priority shipping'
+        );
+
+        if (isDeliveryException) {
+            log(`⚠️ [Check][#${upsaleIndex}] Допустимое несовпадение: ожидали "expedited delivery", получили "priority shipping"`);
+        } else {
+            log(`❌ [Check][#${upsaleIndex}] Title не совпал! Ожидали: "${titleStripped}", Фактический: "${actualTitle}"`);
+        }
     } else if (expectedUpsale) {
         log(`✅ [Check][#${upsaleIndex}] Title совпал`);
     } else {

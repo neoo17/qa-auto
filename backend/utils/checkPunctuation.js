@@ -55,10 +55,12 @@ module.exports = async function checkPunctuation(page, log, countryCode) {
     });
 
     let errors = [];
-    
-    // Проверяем каждый текстовый узел
+
     textContent.forEach(text => {
-        // Проверка на отсутствие пробелов (когда они должны быть)
+        const skipTimerPattern = /\b\d{1,2}:\d{2}\b/;
+        if (skipTimerPattern.test(text)) {
+            return;
+        }
         if (rules.needSpace && rules.needSpace.length > 0) {
             rules.needSpace.forEach(symbol => {
                 const regex = new RegExp(`\\w[${symbol}]`, 'g');

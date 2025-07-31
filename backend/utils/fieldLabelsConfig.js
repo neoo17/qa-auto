@@ -194,7 +194,7 @@ module.exports = {
         zipCode: {label: 'Código postal:', placeholder: 'Código postal*', type: 'text'},
         city: {label: 'Ciudad:', placeholder: 'Ciudad*', type: 'text'},
         state: {label: 'Provincia:', placeholder: 'Seleccione provincia', type: 'select'}, // select
-        country: {label: '', placeholder: '', type: 'select'}, // select
+        country: {label: 'País:', placeholder: '', type: 'select'}, // select
     },
 
     us_es: {
@@ -207,7 +207,7 @@ module.exports = {
         zipCode: {label: 'Código postal:', placeholder: 'Código postal*', type: 'text'},
         city: {label: 'Ciudad:', placeholder: 'Ciudad*', type: 'text'},
         state: {label: 'Estado:', placeholder: 'Seleccionar estado', type: 'select'}, // select
-        country: {label: '', placeholder: '', type: 'select'}, // select
+        country: {label: 'País:', placeholder: '', type: 'select'}, // select
     },
 
     pr: {
@@ -220,7 +220,7 @@ module.exports = {
         zipCode: {label: 'Código postal:', placeholder: 'Código postal*', type: 'text'},
         city: {label: 'Ciudad:', placeholder: 'Ciudad*', type: 'text'},
         state: {label: 'Municipio:', placeholder: 'Seleccione municipio', type: 'select'}, // select
-        country: {label: '', placeholder: '', type: 'select'}, // select
+        country: {label: 'País:', placeholder: '', type: 'select'}, // select
     },
 
     cl: {
@@ -233,7 +233,7 @@ module.exports = {
         zipCode: {label: 'Código postal:', placeholder: 'Código postal*', type: 'text'},
         city: {label: 'Ciudad:', placeholder: 'Ciudad*', type: 'text'},
         state: {label: 'Región:', placeholder: 'Seleccione región', type: 'select'}, // select
-        country: {label: '', placeholder: '', type: 'select'}, // select
+        country: {label: 'País:', placeholder: '', type: 'select'}, // select
     },
 
     ar: {
@@ -246,7 +246,7 @@ module.exports = {
         zipCode: {label: 'Código postal:', placeholder: 'Código postal*', type: 'text'},
         city: {label: 'Ciudad:', placeholder: 'Ciudad*', type: 'text'},
         state: {label: 'Provincia:', placeholder: 'Seleccione provincia', type: 'select'}, // select
-        country: {label: '', placeholder: '', type: 'select'}, // select
+        country: {label: 'País:', placeholder: '', type: 'select'}, // select
     },
 
     mx: {
@@ -259,7 +259,7 @@ module.exports = {
         zipCode: {label: 'Código postal:', placeholder: 'Código postal*', type: 'text'},
         city: {label: 'Ciudad:', placeholder: 'Ciudad*', type: 'text'},
         state: {label: 'Estado:', placeholder: 'Seleccione estado', type: 'select'}, // select
-        country: {label: '', placeholder: '', type: 'select'}, // select
+        country: {label: 'País:', placeholder: '', type: 'select'}, // select
     },
 
     co: {
@@ -272,7 +272,7 @@ module.exports = {
         zipCode: {label: 'Código postal:', placeholder: 'Código postal*', type: 'text'},
         city: {label: 'Ciudad:', placeholder: 'Ciudad*', type: 'text'},
         state: {label: 'Departamento:', placeholder: 'Seleccionar departamento', type: 'select'}, // select
-        country: {label: '', placeholder: '', type: 'select'}, // select
+        country: {label: 'País:', placeholder: '', type: 'select'}, // select
     },
 
     pe: {
@@ -285,7 +285,7 @@ module.exports = {
         zipCode: {label: 'Código postal:', placeholder: 'Código postal*', type: 'text'},
         city: {label: 'Ciudad:', placeholder: 'Ciudad*', type: 'text'},
         state: {label: 'Región:', placeholder: 'Seleccionar región', type: 'select'}, // select
-        country: {label: '', placeholder: '', type: 'select'}, // select
+        country: {label: 'País:', placeholder: '', type: 'select'}, // select
     },
 
     pt: {
@@ -406,15 +406,15 @@ module.exports = {
     },
 
     jp: {
-        firstName: {label: '名:', placeholder: '名*', type: 'text'},
-        lastName: {label: '姓:', placeholder: '姓*', type: 'text'},
-        email: {label: 'メールアドレス:', placeholder: 'メールアドレス*', type: 'email'},
-        phone: {label: '電話番号:', placeholder: '電話番号*', type: 'tel'},
+        firstName: {label: '名：', placeholder: '名*', type: 'text'},
+        lastName: {label: '姓：', placeholder: '姓*', type: 'text'},
+        email: {label: 'メールアドレス：', placeholder: 'メールアドレス*', type: 'email'},
+        phone: {label: '電話番号：', placeholder: '電話番号*', type: 'tel'},
 
-        address: {label: '住所:', placeholder: '住所*', type: 'text'},
-        zipCode: {label: '郵便番号:', placeholder: '郵便番号*', type: 'text'},
-        city: {label: '市区町村:', placeholder: '市区町村*', type: 'text'},
-        state: {label: '都道府県:', placeholder: '都道府県を選択', type: 'select'}, // select
+        address: {label: '住所：', placeholder: '住所*', type: 'text'},
+        zipCode: {label: '郵便番号：', placeholder: '郵便番号*', type: 'text'},
+        city: {label: '市区町村：', placeholder: '市区町村*', type: 'text'},
+        state: {label: '都道府県：', placeholder: '都道府県を選択', type: 'select'}, // select
         country: {label: '', placeholder: '', type: 'select'}, // select
     }
 };
