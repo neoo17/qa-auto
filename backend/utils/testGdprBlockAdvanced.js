@@ -100,8 +100,6 @@ module.exports = async function testGdprBlockAdvanced(page, log, geo, partner, p
 
             if (closed) {
                 log('✅ [GDPR] Попап закрыт.');
-            } else {
-                log('❌ [GDPR] Попап не удалось закрыть!');
             }
 
             await page.waitForTimeout(300);

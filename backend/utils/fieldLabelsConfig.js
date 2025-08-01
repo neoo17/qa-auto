@@ -315,23 +315,23 @@ module.exports = {
     },
 
     se: {
-        firstName: {label: 'Förnamn:', placeholder: 'Förnamn*', type: 'text'},
+        firstName: {label: 'Namn:', placeholder: 'Namn*', type: 'text'},
         lastName: {label: 'Efternamn:', placeholder: 'Efternamn*', type: 'text'},
         email: {label: 'E-post:', placeholder: 'E-post*', type: 'email'},
-        phone: {label: 'Telefonnummer:', placeholder: 'Telefonnummer*', type: 'tel'},
+        phone: {label: 'Telefon:', placeholder: 'Telefon*', type: 'tel'},
 
         address: {label: 'Adress:', placeholder: 'Adress*', type: 'text'},
         zipCode: {label: 'Postnummer:', placeholder: 'Postnummer*', type: 'text'},
         city: {label: 'Stad:', placeholder: 'Stad*', type: 'text'},
-        state: {label: 'Län:', placeholder: 'Välj län', type: 'select'}, // select
-        country: {label: '', placeholder: '', type: 'select'}, // select
+        state: {label: 'Län:', placeholder: 'Välj län', type: 'select'},
+        country: {label: '', placeholder: '', type: 'select'},
     },
 
     dk: {
         firstName: {label: 'Fornavn:', placeholder: 'Fornavn*', type: 'text'},
         lastName: {label: 'Efternavn:', placeholder: 'Efternavn*', type: 'text'},
         email: {label: 'E-mail:', placeholder: 'E-mail*', type: 'email'},
-        phone: {label: 'Telefonnummer:', placeholder: 'Telefonnummer*', type: 'tel'},
+        phone: {label: 'Telefon:', placeholder: 'Telefon*', type: 'tel'},
 
         address: {label: 'Adresse:', placeholder: 'Adresse*', type: 'text'},
         zipCode: {label: 'Postnummer:', placeholder: 'Postnummer*', type: 'text'},

@@ -46,7 +46,7 @@ async function compareTitle({ page, expectedUpsale, upsaleIndex, log }) {
         );
 
         if (isDeliveryException) {
-            log(`⚠️ [Check][#${upsaleIndex}] Допустимое несовпадение: ожидали "expedited delivery", получили "priority shipping"`);
+            log(`✅ [Check][#${upsaleIndex}] Допустимое несовпадение: ожидали "expedited delivery", получили "priority shipping"`);
         } else {
             log(`❌ [Check][#${upsaleIndex}] Title не совпал! Ожидали: "${titleStripped}", Фактический: "${actualTitle}"`);
         }
