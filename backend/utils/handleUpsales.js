@@ -92,17 +92,34 @@ function compareSku({ expectedUpsale, postDataParsed, upsaleIndex, log, sendTest
 module.exports = async function handleUpsales(
     page, log, custom, sendTestInfo, checkStateAjax, firstUpsaleState, screenshotDir, partner
 ) {
-    let selectSchema = "1";
-    if (custom && typeof custom === 'string' && custom.trim().length > 0) selectSchema = custom.trim();
-    if (custom && typeof custom === 'object' && custom.customParam) selectSchema = custom.customParam;
-    let actions = selectSchema.split('-').map(x => Number(x));
-    const buyAll = !actions || actions.length <= 1;
+    // ---- Фикс: берём param / customParam / строку и нормализуем ----
+    const norm = v => String(v || '')
+        .replace(/[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, '-') // разные тире -> '-'
+        .replace(/\s+/g, '')
+        .replace(/[^0-9-]/g, '')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+
+    let selectSchema = '1';
+    if (custom && typeof custom === 'object') {
+        if (custom.param) selectSchema = String(custom.param);
+        else if (custom.customParam) selectSchema = String(custom.customParam);
+    } else if (typeof custom === 'string' && custom.trim()) {
+        selectSchema = custom.trim();
+    }
+    selectSchema = norm(selectSchema) || '1';
+
+    const actions = selectSchema.split('-').map(n => Number(n)).filter(n => Number.isFinite(n));
+
+    // buyAll — если указали только пакет (длина 1) или вообще пусто
+    const buyAll = actions.length <= 1;
+
     let upsaleIndex = 1;
     const maxUpsales = 10;
     const compareUpsales = (firstUpsaleState && firstUpsaleState.upsales) ? firstUpsaleState.upsales : [];
     const compareProfile = (firstUpsaleState && firstUpsaleState.profile) ? firstUpsaleState.profile : {};
     const isDnaLike = partner === 'dnav3' || partner === 'newdna';
-    let prevUrl
+    let prevUrl;
 
     while (upsaleIndex < maxUpsales) {
         let currentUrl = page.url();
@@ -127,6 +144,8 @@ module.exports = async function handleUpsales(
             await page.waitForTimeout(350);
         }
         if (upsaleIndex > 1 && typeof checkStateAjax === 'function') {
+            // действие для текущего апсейла:
+            // если buyAll -> всегда 1 (YES), иначе берём из actions[upsaleIndex]
             let action = buyAll ? 1 : (actions[upsaleIndex] ?? 0);
             if (!(isDnaLike && action !== 1)) {
                 await checkStateAjax(page, log);
@@ -152,36 +171,40 @@ module.exports = async function handleUpsales(
             await page.waitForTimeout(350);
         }
 
-        let action = 1;
-        if (!buyAll) action = actions[upsaleIndex] ?? 0;
+        // --- ДЕЙСТВИЕ ДЛЯ ТЕКУЩЕГО АПСЕЙЛА ---
+        // actions[0] — пакет, поэтому берём actions[upsaleIndex]
+        let action = buyAll ? 1 : (actions[upsaleIndex] ?? 0);
 
-        // --- Новая логика кнопки ---
+        // --- Выбираем нужную кнопку ---
         let btnHandle = null;
         try {
             if (action === 1) {
-                // Купить по первому видимому a.button__yes
                 const yesBtns = await page.$$('a.button__yes:not([style*="display:none"])');
                 if (yesBtns.length) btnHandle = yesBtns[0];
             } else if (action === 2) {
-                // Купить по последнему видимому div.button__yes
-                const yesBtns = await page.$$('div.button__yes:not([style*="display:none"])');
-                if (yesBtns.length) btnHandle = yesBtns[yesBtns.length - 1];
+                const yesDivs = await page.$$('div.button__yes:not([style*="display:none"])');
+                if (yesDivs.length) btnHandle = yesDivs[yesDivs.length - 1];
             } else if (action === 3) {
-                // Купить по последнему видимому a.button__yes
                 const yesBtns = await page.$$('a.button__yes:not([style*="display:none"])');
                 if (yesBtns.length) btnHandle = yesBtns[yesBtns.length - 1];
             } else {
-                // Отклонить — по первой видимой a.button__no
-                const noBtns = await page.$$('a.button__no:not([style*="display:none"])');
+                // NO
+                // На некоторых лендингах кнопка NO бывает <button> или <div>. Подстрахуемся.
+                const noBtns =
+                    (await page.$$('a.button__no:not([style*="display:none"])')).concat(
+                        await page.$$('button.button__no:not([style*="display:none"])'),
+                        await page.$$('div.button__no:not([style*="display:none"])')
+                    );
                 if (noBtns.length) btnHandle = noBtns[0];
             }
         } catch {
             btnHandle = null;
         }
+
         if (!btnHandle) {
-            log(`❌ Нет видимой кнопки ${action === 1 || action === 2 || action === 3 ? 'YES' : 'NO'} для апсейла #${upsaleIndex}`);
+            log(`❌ Нет видимой кнопки ${action === 0 ? 'NO' : 'YES'} для апсейла #${upsaleIndex}`);
             if (sendTestInfo) sendTestInfo({
-                error: `Нет видимой кнопки ${action === 1 || action === 2 || action === 3 ? 'YES' : 'NO'} для апсейла #${upsaleIndex}`
+                error: `Нет видимой кнопки ${action === 0 ? 'NO' : 'YES'} для апсейла #${upsaleIndex}`
             });
             break;
         }
@@ -233,25 +256,25 @@ module.exports = async function handleUpsales(
             let statePromise = null;
             if (isDnaLike) {
                 if (isYes) {
-                    waitRequest = page.waitForRequest(req =>
-                            req.method() === 'POST' && req.url().includes('/upsale'),
+                    waitRequest = page.waitForRequest(
+                        req => req.method() === 'POST' && req.url().includes('/upsale'),
                         { timeout: 5000 }
                     );
                 }
             } else {
                 if (isYes) {
-                    waitRequest = page.waitForRequest(req =>
-                            req.method() === 'POST' && req.url().includes('/ajax/add-upsale'),
+                    waitRequest = page.waitForRequest(
+                        req => req.method() === 'POST' && req.url().includes('/ajax/add-upsale'),
                         { timeout: 5000 }
                     );
                 } else {
-                    waitRequest = page.waitForRequest(req =>
-                            req.method() === 'POST' && req.url().includes('/ajax/skip-upsells'),
+                    waitRequest = page.waitForRequest(
+                        req => req.method() === 'POST' && req.url().includes('/ajax/skip-upsells'),
                         { timeout: 5000 }
                     );
                 }
-                statePromise = page.waitForResponse(res =>
-                        res.url().includes('/ajax/state') && res.status() === 200,
+                statePromise = page.waitForResponse(
+                    res => res.url().includes('/ajax/state') && res.status() === 200,
                     { timeout: 5000 }
                 );
             }
@@ -318,8 +341,8 @@ module.exports = async function handleUpsales(
 
         if (/confirmation\.html/i.test(afterUrl)) {
             try {
-                await page.waitForResponse(res =>
-                        res.url().includes('/ajax/state') && res.status() === 200,
+                await page.waitForResponse(
+                    res => res.url().includes('/ajax/state') && res.status() === 200,
                     { timeout: 3000 }
                 );
                 log('🟢 Пойман state на confirmation');

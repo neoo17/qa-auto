@@ -17,7 +17,6 @@ module.exports = async function chooseByCustomParam(page, log, custom, sendTestI
         selectSchema = custom.trim();
     }
 
-    // нормализация: любые «красивые» дефисы -> -, убрать пробелы и мусор
     selectSchema = selectSchema
         .replace(/[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, '-') // все виды тире
         .replace(/\s+/g, '')
@@ -30,8 +29,6 @@ module.exports = async function chooseByCustomParam(page, log, custom, sendTestI
         .filter(n => Number.isFinite(n));
 
     const orderType = actions[0] || 1;
-
-    log(`🛠 [chooseByCustomParam] selectSchema="${selectSchema}", actions=${JSON.stringify(actions)}, first=${orderType}`);
 
     const selector = `.package[data-order-type="${orderType}"]`;
     const pkg = await page.$(selector);
