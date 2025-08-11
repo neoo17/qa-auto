@@ -1,62 +1,65 @@
 /**
- * Выбирает нужный пакет по customParam и проверяет корректность отправленного SKU через POST /order.
+ * Выбирает нужный пакет по customParam/param и проверяет корректность отправленного SKU через POST /order.
  * @param {import('playwright').Page} page
  * @param {Function} log
- * @param {string|object} custom - кастомный параметр для выбора пакета
- * @param {Function} sendTestInfo - функция для передачи информации во фронт
- * @param {Array} products - список продуктов (пакетов) со state
+ * @param {string|object} custom
+ * @param {Function} sendTestInfo
+ * @param {Array} products
  */
 module.exports = async function chooseByCustomParam(page, log, custom, sendTestInfo, products) {
-    // 1. Определяем какой пакет выбирать (customParam, по умолчанию "1")
+    // --- отладка входа ---
+
     let selectSchema = "1";
-    if (custom && typeof custom === 'string' && custom.trim().length > 0) {
+    if (custom && typeof custom === 'object') {
+        if (custom.param) selectSchema = String(custom.param);
+        else if (custom.customParam) selectSchema = String(custom.customParam);
+    } else if (typeof custom === 'string' && custom.trim()) {
         selectSchema = custom.trim();
     }
-    if (custom && typeof custom === 'object' && custom.customParam) {
-        selectSchema = custom.customParam;
-    }
-    const actions = selectSchema.split('-').map(x => Number(x));
+
+    // нормализация: любые «красивые» дефисы -> -, убрать пробелы и мусор
+    selectSchema = selectSchema
+        .replace(/[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, '-') // все виды тире
+        .replace(/\s+/g, '')
+        .replace(/[^0-9-]/g, '')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '') || "1";
+
+    const actions = selectSchema.split('-')
+        .map(n => Number(n))
+        .filter(n => Number.isFinite(n));
+
     const orderType = actions[0] || 1;
+
+    log(`🛠 [chooseByCustomParam] selectSchema="${selectSchema}", actions=${JSON.stringify(actions)}, first=${orderType}`);
+
     const selector = `.package[data-order-type="${orderType}"]`;
     const pkg = await page.$(selector);
 
-    // 2. Получаем информацию о выбранном пакете
-    let packageInfo;
-    if (Array.isArray(products) && products[orderType - 1]) {
-        packageInfo = products[orderType - 1];
-    }
+    // 2) Информация о пакете
+    const packageInfo = Array.isArray(products) ? products[orderType - 1] : undefined;
 
-    // 3. Если не найден - пишем ошибку и выходим
+    // 3) Ошибка, если пакет не найден
     if (!pkg) {
-        log(`❌ Не найден пакет с data-order-type="${orderType}" (customParam: ${selectSchema})`);
-        if (sendTestInfo) {
-            sendTestInfo({
-                error: `❌ Не найден пакет с data-order-type="${orderType}" (customParam: ${selectSchema})`,
-                package: packageInfo
-            });
-        }
+        const err = `❌ Не найден пакет data-order-type="${orderType}" (schema: ${selectSchema})`;
+        log(err);
+        sendTestInfo && sendTestInfo({ error: err, package: packageInfo });
         throw new Error(`Нет такого пакета (data-order-type=${orderType})`);
     }
 
-    // 4. Выводим инфоблок о выбранном пакете
-    log(`✔️ Кликнули по пакету с data-order-type="${orderType}"`);
-    if (sendTestInfo) {
-        sendTestInfo({
-            message: `Выбран пакет: data-order-type="${orderType}" (customParam: ${selectSchema})`,
-            package: packageInfo
-        });
-    }
+    // 4) Кликаем и ждём POST /order
+    log(`✔️ Кликаем по пакету data-order-type="${orderType}"`);
+    sendTestInfo && sendTestInfo({
+        message: `Выбран пакет: data-order-type="${orderType}" (schema: ${selectSchema})`,
+        package: packageInfo
+    });
 
-    // 5. Ловим POST на /order, когда кликнули на пакет
     const [request] = await Promise.all([
-        page.waitForRequest(req =>
-                req.method() === 'POST' && req.url().includes('/order'),
-            { timeout: 3000 }
-        ),
+        page.waitForRequest(req => req.method() === 'POST' && req.url().includes('/order'), { timeout: 5000 }),
         pkg.click()
     ]);
 
-    // 6. Проверяем, что ушло на бекенд (SKU и весь body)
+    // 6) Проверяем отправку
     if (request) {
         const postData = request.postData();
         let sentSku = null;
@@ -66,26 +69,23 @@ module.exports = async function chooseByCustomParam(page, log, custom, sendTestI
                 const params = new URLSearchParams(postData);
                 for (const [k, v] of params.entries()) postDataParsed[k] = v;
                 sentSku = params.get('product');
-            } catch (e) {
+            } catch {
                 postDataParsed = postData;
+                try {
+                    const obj = JSON.parse(postData);
+                    if (obj && obj.product != null) sentSku = obj.product;
+                } catch { /* noop */ }
             }
         }
 
-        // -- Только этот объект попадает во фронт для отображения POST-запроса! --
-        if (sendTestInfo) {
-            sendTestInfo({
-                _section: 'POST ajax/order',
-                data: postDataParsed
-            });
-        }
+        sendTestInfo && sendTestInfo({ _section: 'POST ajax/order', data: postDataParsed });
 
-        // 7. Логируем результат сравнения SKU
-        if (sentSku && packageInfo && sentSku === String(packageInfo.sku)) {
-            log(`✅ SKU, отправленный при выборе пакета, совпадает: ${sentSku}`);
+        if (sentSku && packageInfo && String(sentSku) === String(packageInfo.sku)) {
+            log(`✅ SKU совпадает: ${sentSku}`);
         } else {
-            const errText = `❌ SKU, отправленный при выборе пакета, не совпадает! Ожидали: ${packageInfo?.sku}, отправили: ${sentSku}`;
+            const errText = `❌ SKU не совпадает! Ожидали: ${packageInfo?.sku}, отправили: ${sentSku}`;
             log(errText);
-            if (sendTestInfo) sendTestInfo({ error: errText, _section: 'POST ajax/order', data: postDataParsed });
+            sendTestInfo && sendTestInfo({ error: errText, _section: 'POST ajax/order', data: postDataParsed });
         }
     } else {
         log('❌ Не удалось отследить ajax-запрос на /order после выбора пакета!');
