@@ -20,6 +20,7 @@ const testGdprBlockAdvanced = require("../utils/testGdprBlockAdvanced");
 const checkOnPage = require("../utils/checkOnPage");
 const checkPunctuation = require("../utils/checkPunctuation");
 const checkSelectStateISOLookup = require("../utils/checkSelectStateISOLookup");
+const checkBrokenImages = require("../utils/checkBrokenImages");
 
 module.exports = async function shortMobile(
     page, log, context, url, country, custom, sendPerf, sendTestInfo, screenshotDir, firstState
@@ -31,12 +32,15 @@ module.exports = async function shortMobile(
 
     const stateData2 = await firstState;
 
+    await checkBrokenImages(page, log, sendTestInfo);
+
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
         await testGdprBlockAdvanced(page, log, country, custom.partner, "checkout");
         await checkAllPopups(page, log, custom.partner, "qualify");
     }
     await shot(page, screenshotDir, 'qualify', log);
+
     await checkPageTitleMatchesState(page, stateData2, log, "qualify");
     if (typeof sendPerf === 'function') await collectPerfStats(page, 'qualify', sendPerf);
     await testThreeDS(page, log, custom.threeDS, 'qualify');
@@ -50,12 +54,16 @@ module.exports = async function shortMobile(
         await page.click('form#qualify button[type="submit"]');
     }
     const stateData3 = await chooseStatePromise;
+
+    await checkBrokenImages(page, log, sendTestInfo);
+
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
         await testGdprBlockAdvanced(page, log, country, custom.partner, "checkout");
         await checkAllPopups(page, log, custom.partner, "choose");
     }
     await shot(page, screenshotDir, 'choose', log);
+
     await checkPageTitleMatchesState(page, stateData3, log, "choose");
     if (typeof sendPerf === 'function') await collectPerfStats(page, 'choose', sendPerf);
     await checkChoosePackages(page, stateData3.data.products, log);
@@ -68,6 +76,9 @@ module.exports = async function shortMobile(
     const stateData4 = await shippingStatePromise;
 
     log('=== Полученная страна: ' + country);
+
+    await checkBrokenImages(page, log, sendTestInfo);
+
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
         await testGdprBlockAdvanced(page, log, country, custom.partner, "checkout");
@@ -92,6 +103,9 @@ module.exports = async function shortMobile(
     }
 
     const stateData5 = await checkoutStatePromise;
+
+    await checkBrokenImages(page, log, sendTestInfo);
+
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
         await testGdprBlockAdvanced(page, log, country, custom.partner, "checkout");

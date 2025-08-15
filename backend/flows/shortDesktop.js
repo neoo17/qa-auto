@@ -20,6 +20,7 @@ const checkCheckoutForm = require("../utils/checkCheckoutForm");
 const chooseProductByCustomParam = require("../utils/chooseProductByCustomParam");
 const checkChoosePackages = require("../utils/checkChoosePackages");
 const checkSelectStateISOLookup = require("../utils/checkSelectStateISOLookup");
+const checkBrokenImages = require("../utils/checkBrokenImages");
 
 /**
  * Десктопный флоу с объединенной формой shipping
@@ -52,6 +53,10 @@ module.exports = async function Basic(
     // if (stateData?.data?.templates?.title) {
     //     await checkNoOtherProductsOnPage(page, stateData.data.templates.title, log, productList);
     // }
+
+
+
+    await checkBrokenImages(page, log, sendTestInfo);
 
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);

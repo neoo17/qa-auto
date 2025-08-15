@@ -23,6 +23,7 @@ const testGdprBlockAdvanced = require("../utils/testGdprBlockAdvanced");
 const checkOnPage = require("../utils/checkOnPage");
 const checkPunctuation = require("../utils/checkPunctuation");
 const checkSelectStateISOLookup = require("../utils/checkSelectStateISOLookup");
+const checkBrokenImages = require("../utils/checkBrokenImages");
 
 module.exports = async function mobileOnlyFlow(
     page, log, context, url, country, custom, sendPerf, sendTestInfo, screenshotDir, firstState
@@ -42,6 +43,8 @@ module.exports = async function mobileOnlyFlow(
     await checkPageTitleMatchesState(page, stateData, log, "index");
     if (typeof sendPerf === 'function') await collectPerfStats(page, 'main', sendPerf);
 
+    await checkBrokenImages(page, log, sendTestInfo);
+
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
         await testGdprBlockAdvanced(page, log, country, custom.partner, 'index');
@@ -54,6 +57,9 @@ module.exports = async function mobileOnlyFlow(
     const qualifyStatePromise = checkStateAjax(page, log);
     await clickSendButtonAndCheckQualify(page, log);
     const stateData2 = await qualifyStatePromise;
+
+    await checkBrokenImages(page, log, sendTestInfo);
+
     if (custom.checkType === 'full') {
         await testGdprBlockAdvanced(page, log, country, custom.partner, "qualify");
         await checkAllPopups(page, log, custom.partner, "qualify");
@@ -73,6 +79,9 @@ module.exports = async function mobileOnlyFlow(
     }
 
     const stateData3 = await chooseStatePromise;
+
+    await checkBrokenImages(page, log, sendTestInfo);
+
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
         await testGdprBlockAdvanced(page, log, country, custom.partner, "choose");
@@ -91,6 +100,8 @@ module.exports = async function mobileOnlyFlow(
     const stateData4 = await shippingStatePromise;
 
     log('=== Полученная страна: ' + country);
+
+    await checkBrokenImages(page, log, sendTestInfo);
 
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
@@ -114,6 +125,9 @@ module.exports = async function mobileOnlyFlow(
         await page.click('form#shipping-mobile button[type="submit"]');
     }
     const stateData5 = await checkoutStatePromise;
+
+    await checkBrokenImages(page, log, sendTestInfo);
+
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
         await testGdprBlockAdvanced(page, log, country, custom.partner, "checkout");

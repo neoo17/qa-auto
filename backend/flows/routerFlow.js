@@ -8,6 +8,7 @@ const shot = require("../utils/screenshotHelper");
 const checkPageTitleMatchesState = require("../utils/checkPageTitleMatchesState");
 const handleUpsales = require("../utils/handleUpsales");
 const checkConfirmationPage = require("../utils/checkConfirmationPage");
+const checkBrokenImages = require("../utils/checkBrokenImages");
 
 
 module.exports = async function routerFlow(page, log, context, url, country, custom, sendPerf, sendTestInfo, screenshotDir) {
@@ -50,6 +51,8 @@ async function continueFlowAfterQualify(
         // --- Confirmation ---
         await checkPageTitleMatchesState(page, stateData, log, "confirmation");
 
+        await checkBrokenImages(page, log, sendTestInfo);
+
         if (custom.checkType === 'full' && (custom.partner === 'ga' || custom.partner === 'hg')) {
             await checkAllPopups(page, log, custom.partner, "confirmation");
         }
@@ -59,6 +62,8 @@ async function continueFlowAfterQualify(
     } else {
         // --- Confirmation ---
         await checkPageTitleMatchesState(page, stateData, log, "confirmation");
+
+        await checkBrokenImages(page, log, sendTestInfo);
 
         if (custom.checkType === 'full' && (custom.partner === 'ga' || custom.partner === 'hg')) {
             await checkAllPopups(page, log, custom.partner, "confirmation");

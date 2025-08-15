@@ -21,6 +21,7 @@ const checkCheckoutForm = require("../utils/checkCheckoutForm");
 const chooseProductByCustomParam = require("../utils/chooseProductByCustomParam");
 const checkChoosePackages = require("../utils/checkChoosePackages");
 const checkSelectStateISOLookup = require("../utils/checkSelectStateISOLookup");
+const checkBrokenImages = require("../utils/checkBrokenImages");
 
 /**
  * Десктопный флоу с объединенной формой shipping
@@ -66,6 +67,8 @@ module.exports = async function Basic(
     await checkPageTitleMatchesState(page, stateData, log, "index");
     if (typeof sendPerf === 'function') await collectPerfStats(page, 'main', sendPerf);
 
+    await checkBrokenImages(page, log, sendTestInfo);
+
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
         await testGdprBlockAdvanced(page, log, country, custom.partner, 'index');
@@ -90,6 +93,7 @@ module.exports = async function Basic(
 
     const stateData3 = await orderStatePromise;
 
+    await checkBrokenImages(page, log, sendTestInfo);
 
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
