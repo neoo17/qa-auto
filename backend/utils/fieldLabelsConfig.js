@@ -343,11 +343,11 @@ module.exports = {
     it: {
         firstName: {label: 'Nome:', placeholder: 'Nome*', type: 'text'},
         lastName: {label: 'Cognome:', placeholder: 'Cognome*', type: 'text'},
-        email: {label: 'E-mail:', placeholder: 'E-mail*', type: 'email'},
-        phone: {label: 'Numero di telefono:', placeholder: 'Numero di telefono*', type: 'tel'},
+        email: {label: 'Email:', placeholder: 'Email*', type: 'email'},
+        phone: {label: 'Telefono:', placeholder: 'Telefono*', type: 'tel'},
 
         address: {label: 'Indirizzo:', placeholder: 'Indirizzo*', type: 'text'},
-        zipCode: {label: 'Codice postale:', placeholder: 'Codice postale*', type: 'text'},
+        zipCode: {label: 'CAP:', placeholder: 'CAP*', type: 'text'},
         city: {label: 'Città:', placeholder: 'Città*', type: 'text'},
         state: {label: 'Regione:', placeholder: 'Seleziona la regione', type: 'select'}, // select
         country: {label: '', placeholder: '', type: 'select'}, // select
