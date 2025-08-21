@@ -513,7 +513,7 @@ const globalConfig = reactive({
   selectedDevice: '',
   selectedBrowser: 'chromium',
   selectedVersion: 'stable',
-  selectedPartner: 'ga',
+  selectedPartner: 'hg',
   selectedCheckType: 'full'
 })
 
