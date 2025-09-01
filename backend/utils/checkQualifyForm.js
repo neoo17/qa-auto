@@ -3,12 +3,23 @@ const fieldsConfig = require('./fieldLabelsConfig.js');
 const QUALIFY_FIELDS = ['firstName', 'lastName', 'email', 'phone'];
 
 /**
+ * Нормализация текста: заменяет неразрывные пробелы и приводит все пробелы к обычным
+ * @param {string|null} str
+ * @returns {string}
+ */
+function normalizeText(str) {
+    return (str || '')
+        .replace(/\u00A0/g, ' ')  // неразрывный пробел → обычный
+        .replace(/\s+/g, ' ')     // все пробельные последовательности → один пробел
+        .trim();
+}
+
+/**
  * @param {import('playwright').Page} page
  * @param {Function} log
  * @param {string} countryCode
  * @param {string} partner
  */
-
 module.exports = async function checkQualifyForm(page, log, countryCode, partner) {
     log('📝 Проверяем наличие формы #qualify...');
     await page.waitForSelector('form#qualify', { timeout: 7000 });
@@ -17,7 +28,7 @@ module.exports = async function checkQualifyForm(page, log, countryCode, partner
     const couponExists = await page.$(couponSelector);
 
     if (couponExists) {
-        const couponValue = await page.$eval(couponSelector, el => el.textContent.trim());
+        const couponValue = normalizeText(await page.$eval(couponSelector, el => el.textContent));
         log(`🧾 На странице есть купон: "${couponValue}"`);
 
         if (['dnav3', 'newdna'].includes(partner)) {
@@ -38,7 +49,6 @@ module.exports = async function checkQualifyForm(page, log, countryCode, partner
         log('ℹ️ Купон <span class="coupon">BS31910296</span> не найден на странице (пропускаем проверку)');
     }
 
-
     log(`🌎 Проверяем лейблы и плейсхолдеры для QUALIFY (${countryCode})`);
     const config = fieldsConfig[countryCode];
     if (!config) {
@@ -51,7 +61,11 @@ module.exports = async function checkQualifyForm(page, log, countryCode, partner
             // Label
             let actualLabel = null;
             try {
-                actualLabel = await page.$eval(`${inputSel} >> xpath=../../label`, el => el.textContent.trim());
+                actualLabel = await page.$eval(
+                    `${inputSel} >> xpath=../../label`,
+                    el => el.textContent
+                );
+                actualLabel = normalizeText(actualLabel);
             } catch {
                 actualLabel = null;
             }
@@ -65,6 +79,7 @@ module.exports = async function checkQualifyForm(page, log, countryCode, partner
             let actualPlaceholder = null;
             try {
                 actualPlaceholder = await page.$eval(inputSel, el => el.getAttribute('placeholder'));
+                actualPlaceholder = normalizeText(actualPlaceholder);
             } catch {
                 actualPlaceholder = null;
             }
@@ -78,6 +93,7 @@ module.exports = async function checkQualifyForm(page, log, countryCode, partner
             let actualType = null;
             try {
                 actualType = await page.$eval(inputSel, el => el.getAttribute('type'));
+                actualType = normalizeText(actualType);
             } catch {
                 actualType = null;
             }
@@ -101,7 +117,14 @@ module.exports = async function checkQualifyForm(page, log, countryCode, partner
         log('❌ Форма исчезла — баг при отправке пустой формы');
     }
 
-    const invalidEmails = ['test@', 'bad.email', '@domain.com', '.user@gmail.com', 'user.@gmail.com', 'us..er@gmail.com'];
+    const invalidEmails = [
+        'test@',
+        'bad.email',
+        '@domain.com',
+        '.user@gmail.com',
+        'user.@gmail.com',
+        'us..er@gmail.com'
+    ];
     for (const bad of invalidEmails) {
         await page.fill('input[name="firstName"]', 'Test');
         await page.fill('input[name="lastName"]', 'Test');
