@@ -12,13 +12,16 @@ module.exports = async function chooseProductByCustomParam(page, log, custom, se
         mainIndex = selectSchema.split('-')[0].trim();
     }
 
+    mainIndex = String(mainIndex).replace(/[^0-9]/g, '');
+
     let index = 1;
     if (/^\d+$/.test(mainIndex)) {
         index = Number(mainIndex);
     } else {
-        const match = String(mainIndex).match(/product(\d+)/);
+        const match = String(mainIndex).match(/product(\d+)/i);
         if (match) index = Number(match[1]);
     }
+
     const selector = `.product.product${index}`;
     const product = await page.$(selector);
 

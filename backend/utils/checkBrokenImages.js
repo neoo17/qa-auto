@@ -171,11 +171,7 @@ module.exports = async function checkBrokenImages(page, log, sendTestInfo) {
 
     if (broken.length === 0) {
         log(`✅ [BrokenResources] Битых ресурсов не найдено. Страница: ${pageUrl}`);
-        sendTestInfo && sendTestInfo({
-            _section: 'BrokenImages',
-            page: pageUrl,
-            message: 'Битых ресурсов не найдено'
-        });
+
         return [];
     }
 
@@ -190,11 +186,6 @@ module.exports = async function checkBrokenImages(page, log, sendTestInfo) {
 
     log(`❌ [BrokenResources] На странице "${pageName}" отсутствует ресурс "${fileName}" (тип: ${humanType}, код: ${first.status || first.error || '??'})`);
 
-    sendTestInfo && sendTestInfo({
-        _section: 'BrokenImages',
-        page: pageUrl,
-        message: `Отсутствует ресурс "${fileName}" (тип: ${humanType}) на странице "${pageName}"`
-    });
 
     return broken;
 };

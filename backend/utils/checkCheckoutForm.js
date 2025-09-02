@@ -1,19 +1,48 @@
 /**
  * @param {import('playwright').Page} page
  * @param {Function} log
+ * @param {string|object|undefined} [custom] // <-- опционально: как в chooseByCustomParam
  * @param {Function} [sendTestInfo]
  * @param {Function} [checkStateAjax]
- * @param {string} checkType
+ * @param {string} [checkType]
  */
-module.exports = async function checkCheckoutForm(page, log, sendTestInfo, checkStateAjax, checkType) {
+module.exports = async function checkCheckoutForm(page, log, custom, sendTestInfo, checkStateAjax, checkType) {
+    if (typeof custom === 'function' || custom === undefined) {
+        checkType = checkStateAjax;
+        checkStateAjax = sendTestInfo;
+        sendTestInfo = custom;
+        custom = undefined;
+    }
+
+    // ---- Нормализация custom-схемы (как в chooseByCustomParam), но сохраняем буквы 'p' ----
+    let selectSchema = "1";
+    if (custom && typeof custom === 'object') {
+        if (custom.param) selectSchema = String(custom.param);
+        else if (custom.customParam) selectSchema = String(custom.customParam);
+    } else if (typeof custom === 'string' && custom.trim()) {
+        selectSchema = custom.trim();
+    }
+
+    // Оставляем цифры, дефисы и латинские буквы (для фиксации 'p')
+    selectSchema = (selectSchema || "1")
+        .replace(/[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, '-') // все виды тире
+        .replace(/\s+/g, '')
+        .replace(/[^0-9a-zA-Z-]/g, '')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '') || "1";
+
+    const partsRaw = selectSchema.split('-').filter(Boolean);
+    const firstRaw = partsRaw[0] || "1";
+    const hasP = /p/i.test(firstRaw);
+    const orderType = parseInt(firstRaw, 10) || 1;
+
+    // Для возможного дальнейшего использования сценарных шагов
+    const actions = partsRaw.map(x => parseInt(x, 10)).filter(Number.isFinite);
+
     let declinePopupWasClosed = false;
 
     async function waitLoaderGone(page, timeout = 12000) {
-        const selectors = [
-            '#proc_popup',
-            '.loading',
-            '.loader',
-        ];
+        const selectors = ['#proc_popup', '.loading', '.loader'];
         const start = Date.now();
         while (Date.now() - start < timeout) {
             const anyVisible = await page.evaluate((sels) => {
@@ -56,7 +85,6 @@ module.exports = async function checkCheckoutForm(page, log, sendTestInfo, check
         throw new Error('Не найден элемент для отправки формы!');
     }
 
-    // Попап закрываем только 1 раз за весь тест
     async function closeDeclinePopupIfVisible(page) {
         if (declinePopupWasClosed) return;
         try {
@@ -66,19 +94,154 @@ module.exports = async function checkCheckoutForm(page, log, sendTestInfo, check
             log('⚡️ Закрыли Shopify Decline popup');
             declinePopupWasClosed = true;
         } catch {
-            // Попап не появился — окей
+
         }
     }
 
     log('💳 Проверяем и заполняем форму #checkout...');
     await page.waitForSelector('form#checkout', { timeout: 7000 });
 
-    // --- Фильтруем консольные ошибки про 400 ---
+    try {
+        if (custom && (custom.partner === 'dnav3' || custom.partner === 'newdna') && custom.shipping === false) {
+            const standardInput = page.locator('input#standard');
+            const standardLabel = page.locator('label.delivery-line[for="standard"], label[for="standard"].delivery-line');
+
+
+            const exists = (await standardInput.count().catch(() => 0)) > 0;
+            if (!exists) {
+                log('ℹ️ Радио-кнопка доставки #standard не найдена — пропускаем переключение.');
+            } else {
+                const isStandardChecked = async () => {
+                    try { return await standardInput.isChecked(); }
+                    catch {
+                        return await page.evaluate(() => !!document.querySelector('#standard')?.checked);
+                    }
+                };
+
+                if (!(await isStandardChecked())) {
+
+                    if ((await standardLabel.count()) > 0) {
+                        await standardLabel.scrollIntoViewIfNeeded().catch(() => {});
+                        await standardLabel.click({ timeout: 1500 }).catch(() => {});
+                    }
+
+                    if (!(await isStandardChecked())) {
+                        if ((await standardInput.count()) > 0) {
+                            await standardInput.scrollIntoViewIfNeeded().catch(() => {});
+
+                            await standardInput.click({ timeout: 800 }).catch(async () => {
+                                await page.evaluate(() => {
+                                    const std = document.querySelector('#standard');
+                                    if (!std) return;
+                                    std.checked = true;
+                                    std.dispatchEvent(new Event('input', { bubbles: true }));
+                                    std.dispatchEvent(new Event('change', { bubbles: true }));
+                                    const lbl = document.querySelector('label[for="standard"]');
+                                    if (lbl) lbl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                                });
+                            });
+                        }
+                    }
+
+                    if (await isStandardChecked()) {
+                        try {
+                            await page.evaluate(() => {
+                                const exp = document.querySelector('#expedited-dna');
+                                if (exp && exp.checked) {
+                                    exp.checked = false;
+                                    exp.dispatchEvent(new Event('input', { bubbles: true }));
+                                    exp.dispatchEvent(new Event('change', { bubbles: true }));
+                                }
+                            });
+                        } catch {}
+                    }
+
+                    if (await isStandardChecked()) {
+                        log('✅ Доставка переключена на Standard.');
+
+                    } else {
+                        log('❌ Не удалось переключить доставку на Standard (custom.shipping=false).');
+
+                    }
+                } else {
+                    log('ℹ️ Уже выбран Standard (custom.shipping=false).');
+
+                }
+            }
+        }
+    } catch (e) {
+        log('⚠️ Ошибка при переключении доставки на Standard: ' + (e.message || e));
+    }
+
+    try {
+        const shippingChkSel = '#shipping_plus';
+        const labelSel = 'label:has(#shipping_plus)';
+        const checkmarkSel = 'label:has(#shipping_plus) .checkmark';
+
+        const labelLoc = page.locator(labelSel);
+        const chkLoc = page.locator(shippingChkSel);
+        const checkmarkLoc = page.locator(checkmarkSel);
+
+
+        const chkCount = await chkLoc.count().catch(() => 0);
+        if (!chkCount) {
+            log('ℹ️ #shipping_plus не найден на странице — пропускаем настройку доставки/страховки.');
+        } else {
+            const isChecked = async () => {
+                try { return await chkLoc.isChecked(); } catch {
+                    return await page.evaluate(sel => {
+                        const el = document.querySelector(sel);
+                        return !!(el && el.checked);
+                    }, shippingChkSel);
+                }
+            };
+
+            const shouldUncheck = /^\d+$/.test(firstRaw) && orderType === 3 && !hasP;
+
+            if (shouldUncheck) {
+                // 1) пробуем кликнуть по label (он кликабелен даже если input скрыт)
+                if (await labelLoc.count()) {
+                    await labelLoc.scrollIntoViewIfNeeded().catch(() => {});
+                    await labelLoc.click({ timeout: 2000 }).catch(() => {});
+                }
+
+                // 2) если всё ещё отмечен — пробуем клик по .checkmark
+                if (await isChecked() && await checkmarkLoc.count()) {
+                    await checkmarkLoc.click({ timeout: 1500 }).catch(() => {});
+                }
+
+                // 3) если всё ещё отмечен — снимаем программно и шлём события
+                if (await isChecked()) {
+                    await page.evaluate((sel) => {
+                        const el = document.querySelector(sel);
+                        if (!el) return;
+                        el.checked = false;
+                        el.dispatchEvent(new Event('input', { bubbles: true }));
+                        el.dispatchEvent(new Event('change', { bubbles: true }));
+                        // если тема слушает клики по label — «симулируем» их тоже
+                        const lbl = el.closest('label');
+                        if (lbl) lbl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                    }, shippingChkSel);
+                }
+
+                if (await isChecked()) {
+                    log('⚠️ Не удалось снять галочку #shipping_plus (schema без "p"). Возможно, блокирует CSS/скрипт.');
+                } else {
+                    log('🛠 Cнята галочка #shipping_plus (schema без "p").');
+                }
+            } else if (hasP) {
+                log('ℹ️ Выбран вариант с буквой "p" — оставляем #shipping_plus как есть (причек).');
+            } else {
+                log(`ℹ️ Схема "${firstRaw}" не требует изменений #shipping_plus.`);
+            }
+        }
+    } catch (e) {
+        log('⚠️ Ошибка при обработке #shipping_plus: ' + (e.message || e));
+    }
+
+
     page.on('console', msg => {
-        if (
-            msg.type() === 'error'
-            && msg.text().includes('Failed to load resource: the server responded with a status of 400')
-        ) {
+        if (msg.type() === 'error' && msg.text().includes('Failed to load resource: the server responded with a status of 400')) {
             return;
         }
         if (msg.type() === 'error') log('[Console error] ' + msg.text());
@@ -96,15 +259,9 @@ module.exports = async function checkCheckoutForm(page, log, sendTestInfo, check
     let retryResponse;
     try {
         const [, resp, resp3ds] = await Promise.all([
-            page.waitForRequest(req =>
-                req.method() === 'POST' && req.url().includes('/order'), { timeout: 5000 }
-            ),
-            page.waitForResponse(res =>
-                res.url().includes('/order') && res.request().method() === 'POST', { timeout: 5000 }
-            ),
-            page.waitForResponse(res =>
-                res.url().includes('/add-order-3ds-key') && res.request().method() === 'POST', { timeout: 5000 }
-            ).catch(() => null),
+            page.waitForRequest(req => req.method() === 'POST' && req.url().includes('/order'), { timeout: 5000 }),
+            page.waitForResponse(res => res.url().includes('/order') && res.request().method() === 'POST', { timeout: 5000 }),
+            page.waitForResponse(res => res.url().includes('/add-order-3ds-key') && res.request().method() === 'POST', { timeout: 5000 }).catch(() => null),
             clickCheckoutSubmit(page, log)
         ]);
         retryResponse = resp3ds || resp;
@@ -288,7 +445,7 @@ module.exports = async function checkCheckoutForm(page, log, sendTestInfo, check
         ).catch(() => null);
 
         const statePromise = (async () => {
-            const state = await checkStateAjax(page, log);
+            const state = await checkStateAjax?.(page, log);
             if (state) log('🟢 State получен на первом апсейле!');
             else log('⚠️ Не удалось получить state на первом апсейле!');
             return state;
@@ -304,7 +461,7 @@ module.exports = async function checkCheckoutForm(page, log, sendTestInfo, check
 
         await clickCheckoutSubmit(page, log);
 
-        const [orderReq, add3dsRequest, ds3Request, ds3Response, upsaleState, nav] = await Promise.all([
+        const [orderReq, add3dsRequest, ds3Request, ds3Response] = await Promise.all([
             orderReqPromise,
             add3dsReqPromise,
             ds3ReqPromise,
@@ -322,24 +479,17 @@ module.exports = async function checkCheckoutForm(page, log, sendTestInfo, check
                 const ds3Json = await ds3Resp.json();
                 if (ds3Json.error) {
                     log(`❌ Деклайн от 3DS: "${ds3Json.error}"`);
-                    if (sendTestInfo) {
-                        sendTestInfo({
-                            _section: '3DS Error',
-                            error: ds3Json.error,
-                            data: ds3Json
-                        });
-                    }
+                    sendTestInfo && sendTestInfo({
+                        _section: '3DS Error',
+                        error: ds3Json.error,
+                        data: ds3Json
+                    });
                 }
-            } catch (e) {}
+            } catch {}
         }
 
-        if (add3dsReq) {
-            log('ℹ️ Обнаружен запрос к ajax/add-order-3ds-key');
-        }
-
-        if (ds3Request) {
-            log('ℹ️ Обнаружен запрос к 3dsintegrator.com');
-        }
+        if (add3dsReq) log('ℹ️ Обнаружен запрос к ajax/add-order-3ds-key');
+        if (ds3Request) log('ℹ️ Обнаружен запрос к 3dsintegrator.com');
     } catch (e) {
         log('❌ [Checkout] Не получили ответ или редирект от сервера! ' + (e.message || e));
     }
@@ -355,20 +505,11 @@ module.exports = async function checkCheckoutForm(page, log, sendTestInfo, check
                 postDataParsed = postData;
             }
         }
-        if (sendTestInfo) {
-            sendTestInfo({
-                _section: 'Checkout POST ajax/order',
-                data: postDataParsed
-            });
-        }
+        sendTestInfo && sendTestInfo({ _section: 'Checkout POST ajax/order', data: postDataParsed });
         log('✅ POST ajax/order на чек-аут отправлен');
     } else {
         log('❌ Не удалось отследить ajax-запрос на /order после отправки формы checkout!');
-        if (sendTestInfo) {
-            sendTestInfo({
-                error: '❌ Не удалось отследить POST ajax/order на чекауте!'
-            });
-        }
+        sendTestInfo && sendTestInfo({ error: '❌ Не удалось отследить POST ajax/order на чекауте!' });
     }
 
     if (add3dsReq) {
@@ -382,30 +523,26 @@ module.exports = async function checkCheckoutForm(page, log, sendTestInfo, check
                 requestData = postData;
             }
         }
-        let responseData = {};
-        if (sendTestInfo) {
-            sendTestInfo({
-                _section: 'Checkout POST ajax/add-order-3ds-key',
-                data: requestData,
-                response: responseData
-            });
-        }
+        sendTestInfo && sendTestInfo({
+            _section: 'Checkout POST ajax/add-order-3ds-key',
+            data: requestData,
+            response: {}
+        });
         log('✅ POST ajax/add-order-3ds-key на чек-аут отправлен');
     }
 
     const currentUrl = page.url();
-
     if (/\/upsale-\d+\.html/i.test(currentUrl)) {
         log(`➡️ Перешли на первый апсейл: ${currentUrl}`);
     } else if (/\/confirmation(\.html)?/i.test(currentUrl)) {
         log(`➡️ Перешли на confirmation: ${currentUrl}`);
     } else {
         log('❌ Не перешли ни на апсейл, ни на confirmation-страницу!');
-        if (sendTestInfo) {
-            sendTestInfo({
-                error: '❌ Не перешли ни на апсейл, ни на confirmation-страницу!',
-                url: currentUrl
-            });
-        }
+        sendTestInfo && sendTestInfo({
+            error: '❌ Не перешли ни на апсейл, ни на confirmation-страницу!',
+            url: currentUrl
+        });
     }
+
+    return actions;
 };

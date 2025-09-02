@@ -21,20 +21,32 @@
         <span class="icon" style="font-size:20px; margin-right:8px;">⚙️</span>
         <span>Глобальные настройки</span>
       </div>
+
       <div class="global-config-fields one-row">
         <select v-model="globalConfig.selectedFlow" @change="syncGlobalToTests">
           <option v-for="flow in flows" :key="flow.value" :value="flow.value">{{ flow.label }}</option>
         </select>
+
         <select v-model="globalConfig.selectedCheckType" @change="syncGlobalToTests">
           <option v-for="opt in checkTypeList" :key="opt.value" :value="opt.value">
             {{ opt.label }}
           </option>
         </select>
-        <select v-model="globalConfig.selectedPartner" @change="syncGlobalToTests">
-          <option v-for="opt in partnersList" :key="opt.value" :value="opt.value">
-            {{ opt.label }}
-          </option>
-        </select>
+
+        <!-- Партнёр + чекбокс Shipping справа -->
+        <div style="display:flex; align-items:center; gap:10px;">
+          <select v-model="globalConfig.selectedPartner" @change="syncGlobalToTests">
+            <option v-for="opt in partnersList" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
+
+          <label v-if="showGlobalShipping"
+                 style="display:flex; align-items:center; gap:6px;">
+            <input type="checkbox" v-model="globalConfig.shipping" @change="syncGlobalToTests" />
+            <span>Shipping</span>
+          </label>
+        </div>
 
         <multiselect
             :key="globalConfig.selectedCountry?.value"
@@ -57,31 +69,28 @@
           </template>
         </multiselect>
 
-
-
         <select v-model="globalConfig.selected3ds" @change="syncGlobalToTests">
           <option v-for="opt in getThreeDsOptions(globalConfig.selectedPartner)" :key="opt.value" :value="opt.value">
             {{ opt.label }}
           </option>
         </select>
-
-
       </div>
-      <div style="    display: flex
-;
-    gap: 13px;
-    align-items: center;
-    flex-wrap: nowrap; margin-top: 15px">
 
+      <div style="display:flex; gap:13px; align-items:center; flex-wrap:nowrap; margin-top:15px">
         <select v-model="globalConfig.selectedDevice" @change="syncGlobalToTests">
           <option v-for="d in devicesList" :value="d.value" :key="d.value">{{ d.label }}</option>
         </select>
         <select v-model="globalConfig.selectedBrowser" @change="syncGlobalToTests">
           <option v-for="b in filteredBrowsers(globalConfig.selectedDevice)" :value="b.value" :key="b.value">{{ b.label }}</option>
         </select>
-        <select v-if="filteredBrowserVersions(globalConfig.selectedDevice, globalConfig.selectedBrowser).length > 1"
-                v-model="globalConfig.selectedVersion" @change="syncGlobalToTests">
-          <option v-for="v in filteredBrowserVersions(globalConfig.selectedDevice, globalConfig.selectedBrowser)" :value="v" :key="v">
+        <select
+            v-if="filteredBrowserVersions(globalConfig.selectedDevice, globalConfig.selectedBrowser).length > 1"
+            v-model="globalConfig.selectedVersion" @change="syncGlobalToTests"
+        >
+          <option
+              v-for="v in filteredBrowserVersions(globalConfig.selectedDevice, globalConfig.selectedBrowser)"
+              :value="v" :key="v"
+          >
             {{ versionLabel(globalConfig.selectedBrowser, v) }}
           </option>
         </select>
@@ -107,6 +116,7 @@
               <input type="checkbox" v-model="test.useCustomConfig" @change="toggleCustomConfig(test)" />
               Использовать отдельные настройки для этого теста
             </label>
+
             <div v-if="test.useCustomConfig" class="per-test-settings-block">
               <div class="per-test-setting">
                 <span>Флоу:</span>
@@ -114,14 +124,25 @@
                   <option v-for="flow in flows" :key="flow.value" :value="flow.value">{{ flow.label }}</option>
                 </select>
               </div>
+
+              <!-- Партнёр + чекбокс Shipping справа (пер-тестово) -->
               <div class="per-test-setting">
                 <span>Партнёр:</span>
-                <select v-model="test.selectedPartner">
-                  <option v-for="opt in partnersList" :key="opt.value" :value="opt.value">
-                    {{ opt.label }}
-                  </option>
-                </select>
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <select v-model="test.selectedPartner">
+                    <option v-for="opt in partnersList" :key="opt.value" :value="opt.value">
+                      {{ opt.label }}
+                    </option>
+                  </select>
+
+                  <label v-if="['newdna','dnav3'].includes(test.selectedPartner)"
+                         style="display:flex; align-items:center; gap:6px;">
+                    <input type="checkbox" v-model="test.shipping" />
+                    <span>Shipping</span>
+                  </label>
+                </div>
               </div>
+
               <div class="per-test-setting">
                 <span>Тип проверки:</span>
                 <select v-model="test.selectedCheckType">
@@ -130,6 +151,7 @@
                   </option>
                 </select>
               </div>
+
               <div class="per-test-setting">
                 <span>Страна:</span>
                 <multiselect
@@ -144,21 +166,14 @@
                     :disabled="false"
                 >
                   <template #option="{ option }">
-                    <img   v-for="flag in (option.flags || [])"
-                           :src="flag"
-                           :key="flag"
-                           style="width:22px;margin-right:5px" />
+                    <img v-for="flag in (option.flags || [])" :src="flag" :key="flag" style="width:22px;margin-right:5px" />
                     <span>{{ option.label }}</span>
                   </template>
                   <template #singleLabel="{ option }">
-                    <img   v-for="flag in (option.flags || [])"
-                           :src="flag"
-                           :key="flag"
-                           style="width:22px;margin-right:5px" />
+                    <img v-for="flag in (option.flags || [])" :src="flag" :key="flag" style="width:22px;margin-right:5px" />
                     <span>{{ option.label }}</span>
                   </template>
                 </multiselect>
-
               </div>
 
               <div class="per-test-setting">
@@ -169,18 +184,21 @@
                   </option>
                 </select>
               </div>
+
               <div class="per-test-setting">
                 <span>Девайс:</span>
                 <select v-model="test.selectedDevice">
                   <option v-for="d in devicesList" :value="d.value" :key="d.value">{{ d.label }}</option>
                 </select>
               </div>
+
               <div class="per-test-setting">
                 <span>Браузер:</span>
                 <select v-model="test.selectedBrowser">
                   <option v-for="b in filteredBrowsers(test.selectedDevice)" :value="b.value" :key="b.value">{{ b.label }}</option>
                 </select>
               </div>
+
               <div class="per-test-setting" v-if="filteredBrowserVersions(test.selectedDevice, test.selectedBrowser).length > 1">
                 <span>Версия:</span>
                 <select v-model="test.selectedVersion">
@@ -193,9 +211,7 @@
           </div>
         </transition>
 
-        <pre v-if="test.logs.length"
-             :ref="el => setLogRef(test.id, el)"
-             class="log-block">
+        <pre v-if="test.logs.length" :ref="el => setLogRef(test.id, el)" class="log-block">
   <div v-for="(log, i) in test.logs" :key="i" v-html="highlightLog(log)"></div>
 </pre>
 
@@ -315,6 +331,7 @@
         </div>
       </fieldset>
     </div>
+
     <!-- FAQ -->
     <div class="custom-param-info-wide">
       <div class="custom-param-header" @click="showParamInfo = !showParamInfo">
@@ -334,18 +351,10 @@
             <li>
               <b>Дальше идут цифры для каждого апсейла:</b>
               <ul>
-                <li>
-                  <code>1</code> — <span style="color:#2abf2a;font-weight:600">Покупаем</span> апсейл ("Yes") по <b>первому видимому</b> <code>a.button__yes</code>
-                </li>
-                <li>
-                  <code>2</code> — <span style="color:#2abf2a;font-weight:600">Покупаем</span> апсейл ("Yes") по блоку <b>DIV</b>   <code>div.button__yes</code>
-                </li>
-                <li>
-                  <code>3</code> — <span style="color:#2abf2a;font-weight:600">Покупаем</span> апсейл ("Yes") по <b>последнему видимому</b> <code>a.button__yes</code>
-                </li>
-                <li>
-                  <code>0</code> — <span style="color:#c82d2d;font-weight:600">Отклоняем</span> апсейл ("No") <code>a.button__no</code>
-                </li>
+                <li><code>1</code> — <span style="color:#2abf2a;font-weight:600">Покупаем</span> апсейл ("Yes") по <b>первому видимому</b> <code>a.button__yes</code></li>
+                <li><code>2</code> — <span style="color:#2abf2a;font-weight:600">Покупаем</span> апсейл ("Yes") по блоку <b>DIV</b> <code>div.button__yes</code></li>
+                <li><code>3</code> — <span style="color:#2abf2a;font-weight:600">Покупаем</span> апсейл ("Yes") по <b>последнему видимому</b> <code>a.button__yes</code></li>
+                <li><code>0</code> — <span style="color:#c82d2d;font-weight:600">Отклоняем</span> апсейл ("No") <code>a.button__no</code></li>
               </ul>
             </li>
             <li>
@@ -361,9 +370,7 @@
               <b>Если поле пустое</b> — будет выбран 1-й пакет, <b>все апсейлы будут куплены</b> до confirmation.
             </li>
           </ul>
-          <p>
-            <b>Финиш:</b> если после апсейлов наступает страница <code>confirmation.html</code>, обработка заканчивается.
-          </p>
+          <p><b>Финиш:</b> если после апсейлов наступает страница <code>confirmation.html</code>, обработка заканчивается.</p>
           <p>
             <b>Кратко:</b><br>
             <code>1</code> — купить по <b>первому</b> <code>a.button__yes</code><br>
@@ -372,7 +379,6 @@
             <code>0</code> — отклонить  <code>.button__no</code>
           </p>
         </div>
-
       </transition>
     </div>
 
@@ -411,13 +417,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, nextTick, watch } from 'vue'
+import { ref, reactive, nextTick, watch, computed } from 'vue'
+import Multiselect from 'vue-multiselect'
+import 'vue-multiselect/dist/vue-multiselect.css'
 
 const showParamInfo = ref(false)
 const screenshotsByTest = ref({})
-
-import Multiselect from 'vue-multiselect'
-import 'vue-multiselect/dist/vue-multiselect.css'
 
 const flag = code => `https://flagcdn.com/24x18/${code}.png`
 
@@ -432,7 +437,6 @@ const countryOptions = [
   { value: 'gb', label: 'UK', flags: [flag('gb')] },
   { value: 'ie', label: 'IE', flags: [flag('ie')] },
   { value: 'fr', label: 'FR', flags: [flag('fr')] },
-  // Двойной флаг: CA (fr) — Канада и Франция
   { value: 'ca_fr', label: 'CA (fr)', flags: [flag('ca'), flag('fr')] },
   { value: 'ch_fr', label: 'CH (fr)', flags: [flag('ch'), flag('fr')] },
   { value: 'de', label: 'DE', flags: [flag('de')] },
@@ -477,25 +481,12 @@ const checkTypeList = [
   { value: 'fast', label: 'Fast' }
 ]
 const browsersList = [
-  {
-    value: 'chromium',
-    label: 'Chromium/Chrome',
-    devices: ['', 'Pixel 5', 'Desktop'],
-    versions: ['stable', '120', '125']
-  },
-  {value: 'firefox', label: 'Firefox', devices: ['', 'Pixel 5', 'Desktop'], versions: ['stable', 'esr']},
-  {
-    value: 'webkit',
-    label: 'WebKit/Safari',
-    devices: ['', 'iPhone 13', 'iPad (gen 7)', 'Desktop'],
-    versions: ['stable']
-  },
+  { value: 'chromium', label: 'Chromium/Chrome', devices: ['', 'Pixel 5', 'Desktop'], versions: ['stable', '120', '125'] },
+  { value: 'firefox', label: 'Firefox', devices: ['', 'Pixel 5', 'Desktop'], versions: ['stable', 'esr']},
+  { value: 'webkit', label: 'WebKit/Safari', devices: ['', 'iPhone 13', 'iPad (gen 7)', 'Desktop'], versions: ['stable'] },
 ]
 
-const flows = [
-  {value: 'routerFlow', label: 'Auto'},
-  // {value: 'basic', label: 'Basic'}
-]
+const flows = [{value: 'routerFlow', label: 'Auto'}]
 const threeDsList = [
   {value: 'none', label: 'Нет 3DS'},
   {value: 'pixxles-dna', label: 'Pixxles DNA'},
@@ -514,8 +505,13 @@ const globalConfig = reactive({
   selectedBrowser: 'chromium',
   selectedVersion: 'stable',
   selectedPartner: 'hg',
-  selectedCheckType: 'full'
+  selectedCheckType: 'full',
+  shipping: false // <-- новый глобальный флаг
 })
+
+const showGlobalShipping = computed(() =>
+    ['newdna','dnav3'].includes(globalConfig.selectedPartner)
+)
 
 const tests = ref([makeTestObj()])
 
@@ -532,6 +528,7 @@ function makeTestObj() {
     selectedVersion: globalConfig.selectedVersion,
     selectedPartner: globalConfig.selectedPartner,
     selectedCheckType: globalConfig.selectedCheckType,
+    shipping: globalConfig.shipping, // <-- пер-тестовый флаг
     customParam: '',
     logs: [],
     errors: [],
@@ -543,9 +540,10 @@ function makeTestObj() {
     showConfig: false,
     pageWeights: [],
     perfCollapsed: true,
-    screenshotsCollapsed: true // Для вкладки скриншотов
+    screenshotsCollapsed: true
   }
 }
+
 function onCountryInput() {
   if (Array.isArray(tests.value)) {
     tests.value.forEach(t => t.countryAuto = false)
@@ -554,7 +552,6 @@ function onCountryInput() {
 function addTest() {
   if (tests.value.length < 10) tests.value.push(makeTestObj())
 }
-
 function removeTest(idx) {
   tests.value.splice(idx, 1)
 }
@@ -564,13 +561,11 @@ function filteredBrowsers(device) {
       devicesList.find(d => d.value === device)?.browsers.includes(b.value)
   )
 }
-
 function filteredBrowserVersions(device, browser) {
   const found = browsersList.find(b => b.value === browser)
   if (!found) return []
   return found.versions || []
 }
-
 function versionLabel(browser, version) {
   if (browser === 'chromium') {
     if (version === '120') return 'Chrome 120'
@@ -588,21 +583,14 @@ function versionLabel(browser, version) {
 }
 
 const threeDsOptions = {
-  newdna: [
-    {value: 'pixxles-dna', label: 'Pixxles DNA'}
-  ],
-  dnav3: [
-    {value: 'pixxles-dna', label: 'Pixxles DNA'}
-  ],
-  ga: [
-    {value: 'pixxles-ga', label: 'Pixxles GA'}
-  ],
+  newdna: [{value: 'pixxles-dna', label: 'Pixxles DNA'}],
+  dnav3: [{value: 'pixxles-dna', label: 'Pixxles DNA'}],
+  ga: [{value: 'pixxles-ga', label: 'Pixxles GA'}],
   hg: [
     {value: 'paay-combined', label: 'PAAY combinedRequest'},
     {value: 'paay-old', label: 'PAAY old'}
   ]
 };
-
 function getThreeDsOptions(partner) {
   return [{value: 'none', label: 'Нет 3DS'}, ...(threeDsOptions[partner] || [])];
 }
@@ -614,7 +602,6 @@ function highlightLog(log) {
   if (log.startsWith('❌') || log.startsWith('⚠️')) return `<span style="color:#ff6767;">${log}</span>`
   return log
 }
-
 function highlightError(log) {
   return `<span style="font-weight:500; color:#ff6767;">${log}</span>`
 }
@@ -630,10 +617,10 @@ function syncGlobalToTests() {
       t.selectedVersion = globalConfig.selectedVersion
       t.selectedPartner = globalConfig.selectedPartner
       t.selectedCheckType = globalConfig.selectedCheckType
+      t.shipping = globalConfig.shipping // <-- проталкиваем
     }
   })
 }
-
 function toggleCustomConfig(test) {
   if (test.useCustomConfig) {
     test.selectedFlow = globalConfig.selectedFlow
@@ -644,22 +631,16 @@ function toggleCustomConfig(test) {
     test.selectedVersion = globalConfig.selectedVersion
     test.selectedPartner = globalConfig.selectedPartner
     test.selectedCheckType = globalConfig.selectedCheckType
+    test.shipping = globalConfig.shipping // <-- начальное значение
   }
 }
 
 const logRefs = ref({})
-
-function setLogRef(id, el) {
-  if (el) logRefs.value[id] = el
-}
-
+function setLogRef(id, el) { if (el) logRefs.value[id] = el }
 function scrollToEnd(id) {
-  nextTick(() => {
-    setTimeout(() => {
-      const el = logRefs.value[id]
-      if (el) el.scrollTop = el.scrollHeight
-    }, 30)
-  })
+  nextTick(() => { setTimeout(() => {
+    const el = logRefs.value[id]; if (el) el.scrollTop = el.scrollHeight
+  }, 30) })
 }
 
 watch(
@@ -673,18 +654,10 @@ watch(
 )
 
 const IMG_HEAVY_LIMIT = 200 * 1024
-
 function isImageType(type) {
   return ['image', 'img', 'jpeg', 'png', 'svg+xml', 'gif', 'webp', 'jpg'].some(key => (type || '').toLowerCase().includes(key))
 }
-
-function heavyImages(pw) {
-  if (!pw.resources) return []
-  return pw.resources.filter(res =>
-      isImageType(res.type) && res.transferred > IMG_HEAVY_LIMIT
-  )
-}
-
+function heavyImages(pw) { if (!pw.resources) return []; return pw.resources.filter(res => isImageType(res.type) && res.transferred > IMG_HEAVY_LIMIT) }
 
 watch(
     () => tests.value.map(t => t.url),
@@ -705,7 +678,6 @@ watch(
     }
 )
 
-
 function extractGeoFromUrl(url) {
   const m = url.match(/\/([a-z]{2}(?:-[a-z]{2})?)-v\d+/i);
   let geo = null;
@@ -720,8 +692,6 @@ function extractGeoFromUrl(url) {
   return geo;
 }
 
-
-
 function pageLabel(page) {
   if (page === 'main') return 'Главная'
   if (page === 'qualify') return 'Qualify'
@@ -732,80 +702,52 @@ function pageLabel(page) {
   if (page === 'confirmation') return 'Confirmation'
   return page
 }
-
 function heavyClass(pw) {
   if (pw.page === 'main' && pw.transferred > 3500 * 1024) return 'too-heavy'
   if (pw.page !== 'main' && pw.transferred > 2000 * 1024) return 'heavy'
   return ''
 }
-
 function shortUrl(url) {
-  try {
-    const u = new URL(url)
-    return u.pathname.split('/').pop() || u.pathname
-  } catch {
-    return url.slice(-28)
-  }
+  try { const u = new URL(url); return u.pathname.split('/').pop() || u.pathname }
+  catch { return url.slice(-28) }
 }
 
 // =================== СКРИНШОТЫ ========================
-// Парсим путь к папке скриншотов из логов и возвращаем список файлов (можешь править под себя)
 function getScreenshotFolder(test) {
   const found = test.logs.find(x => x.includes('Скриншоты будут лежать тут: /screenshots/'));
   if (!found) return '';
   const m = found.match(/\/screenshots\/([\w-]+)\//);
   return m ? m[1] : '';
 }
-
 async function getScreenshotsReal(test) {
   const folder = getScreenshotFolder(test)
   if (!folder) return []
   const names = [
-    'index.png',
-    'qualify.png',
-    'choose.png',
-    'shipping.png',
-    'checkout.png',
-    'order.png',
-    'upsale-1.png',
-    'upsale-2.png',
-    'upsale-3.png',
-    'upsale-4.png',
-    'confirmation.png'
+    'index.png','qualify.png','choose.png','shipping.png','checkout.png','order.png',
+    'upsale-1.png','upsale-2.png','upsale-3.png','upsale-4.png','confirmation.png'
   ]
   const resArr = await Promise.all(names.map(async name => {
     try {
       const res = await fetch(`http://localhost:3000/screenshots/${folder}/${name}`, {method: 'HEAD'})
       if (res.ok) return {url: `http://localhost:3000/screenshots/${folder}/${name}`, name}
-    } catch {
-    }
+    } catch {}
     return null
   }))
-  // Оставляем только существующие
   return resArr.filter(Boolean)
 }
 
-
-const screenshotModal = ref({
-  show: false,
-  testIdx: null,
-  imgIdx: 0
-})
-
+const screenshotModal = ref({ show: false, testIdx: null, imgIdx: 0 })
 function openScreenshotModal(testIdx, imgIdx) {
   screenshotModal.value = {show: true, testIdx, imgIdx}
-  document.body.style.overflow = 'hidden'; // Запрет скролла под модалкой
+  document.body.style.overflow = 'hidden';
 }
-
 function closeScreenshotModal() {
   screenshotModal.value.show = false
   document.body.style.overflow = '';
 }
-
 function prevScreenshot(test) {
   if (screenshotModal.value.imgIdx > 0) screenshotModal.value.imgIdx--
 }
-
 function nextScreenshot(test) {
   const shots = screenshotsByTest.value[test.id] || []
   if (screenshotModal.value.imgIdx < shots.length - 1) screenshotModal.value.imgIdx++
@@ -814,13 +756,8 @@ function nextScreenshot(test) {
 async function runAll() {
   syncGlobalToTests()
   tests.value.forEach(t => {
-    t.logs = [];
-    t.errors = [];
-    t.testEnded = false;
-    t.loading = true;
-    t.pageWeights = [];
-    t.perfCollapsed = true;
-    t.screenshotsCollapsed = true;
+    t.logs = []; t.errors = []; t.testEnded = false; t.loading = true;
+    t.pageWeights = []; t.perfCollapsed = true; t.screenshotsCollapsed = true;
   })
   const testsData = tests.value.map(t => ({
     url: t.url,
@@ -834,10 +771,10 @@ async function runAll() {
       customParam: t.customParam,
       partner: t.selectedPartner,
       checkType: t.selectedCheckType,
-      threeDS: t.selected3ds
+      threeDS: t.selected3ds,
+      shipping: !!t.shipping // <-- ПРОКИДЫВАЕМ
     },
     ninja: ninjaMod.value
-
   }))
   const response = await fetch('http://localhost:3000/api/run-multi-test', {
     method: 'POST',
@@ -884,8 +821,7 @@ async function runAll() {
               tests.value[obj.stream].testInfo.push(obj.text)
             }
           }
-        } catch {
-        }
+        } catch {}
       }
     }
   }
@@ -904,6 +840,7 @@ async function runTest(idx) {
     t.selectedVersion = globalConfig.selectedVersion
     t.selectedPartner = globalConfig.selectedPartner
     t.selectedCheckType = globalConfig.selectedCheckType
+    t.shipping = globalConfig.shipping
   }
 
   if (!t.url) {
@@ -917,10 +854,11 @@ async function runTest(idx) {
   t.pageWeights = []
   t.perfCollapsed = true
   t.screenshotsCollapsed = true
+
   const testsData = [{
     url: t.url,
     flow: t.selectedFlow,
-    country: t.selectedCountry.value, // <--- тут!
+    country: t.selectedCountry.value,
     threeDS: t.selected3ds,
     device: t.selectedDevice,
     browser: t.selectedBrowser,
@@ -930,9 +868,11 @@ async function runTest(idx) {
       partner: t.selectedPartner,
       checkType: t.selectedCheckType,
       threeDS: t.selected3ds,
+      shipping: !!t.shipping // <-- ПРОКИДЫВАЕМ
     },
     ninja: ninjaMod.value,
   }]
+
   const response = await fetch('http://localhost:3000/api/run-multi-test', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
@@ -977,14 +917,12 @@ async function runTest(idx) {
               t.testInfo.push(obj.text)
             }
           }
-        } catch {
-        }
+        } catch {}
       }
     }
   }
   t.loading = false
 }
-
 </script>
 
 

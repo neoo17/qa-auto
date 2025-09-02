@@ -45,6 +45,8 @@ module.exports = async function mobileOnlyFlow(
 
     await checkBrokenImages(page, log, sendTestInfo);
 
+    await checkPunctuation(page, log, country);
+
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
         await testGdprBlockAdvanced(page, log, country, custom.partner, 'index');
@@ -59,6 +61,8 @@ module.exports = async function mobileOnlyFlow(
     const stateData2 = await qualifyStatePromise;
 
     await checkBrokenImages(page, log, sendTestInfo);
+
+    await checkPunctuation(page, log, country);
 
     if (custom.checkType === 'full') {
         await testGdprBlockAdvanced(page, log, country, custom.partner, "qualify");
@@ -137,7 +141,7 @@ module.exports = async function mobileOnlyFlow(
     await testThreeDS(page, log, custom.threeDS, 'checkout');
     if (typeof sendPerf === 'function') await collectPerfStats(page, 'checkout', sendPerf);
     await shot(page, screenshotDir, 'checkout', log);
-    await checkCheckoutForm(page, log, sendTestInfo, checkStateAjax, custom.checkType);
+    await checkCheckoutForm(page, log, custom,  sendTestInfo, checkStateAjax, custom.checkType);
 
     return stateData5;
 };
