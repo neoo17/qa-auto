@@ -45,8 +45,6 @@ module.exports = async function mobileOnlyFlow(
 
     await checkBrokenImages(page, log, sendTestInfo);
 
-    await checkPunctuation(page, log, country);
-
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
         await testGdprBlockAdvanced(page, log, country, custom.partner, 'index');
