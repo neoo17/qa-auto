@@ -115,10 +115,8 @@ module.exports = async function shortMobile(
     await testThreeDS(page, log, custom.threeDS, 'checkout');
     if (typeof sendPerf === 'function') await collectPerfStats(page, 'checkout', sendPerf);
     await shot(page, screenshotDir, 'checkout', log);
-    await checkCheckoutForm(page, log, custom, sendTestInfo, checkStateAjax, custom.checkType);
 
-
-    return stateData5;
+    return await checkCheckoutForm(page, log, custom, sendTestInfo, checkStateAjax, custom.checkType);
 }
 
 

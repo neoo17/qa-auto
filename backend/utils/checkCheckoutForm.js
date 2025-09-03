@@ -106,7 +106,6 @@ module.exports = async function checkCheckoutForm(page, log, custom, sendTestInf
             const standardInput = page.locator('input#standard');
             const standardLabel = page.locator('label.delivery-line[for="standard"], label[for="standard"].delivery-line');
 
-
             const exists = (await standardInput.count().catch(() => 0)) > 0;
             if (!exists) {
                 log('ℹ️ Радио-кнопка доставки #standard не найдена — пропускаем переключение.');
@@ -182,7 +181,6 @@ module.exports = async function checkCheckoutForm(page, log, custom, sendTestInf
         const chkLoc = page.locator(shippingChkSel);
         const checkmarkLoc = page.locator(checkmarkSel);
 
-
         const chkCount = await chkLoc.count().catch(() => 0);
         if (!chkCount) {
             log('ℹ️ #shipping_plus не найден на странице — пропускаем настройку доставки/страховки.');
@@ -238,7 +236,6 @@ module.exports = async function checkCheckoutForm(page, log, custom, sendTestInf
     } catch (e) {
         log('⚠️ Ошибка при обработке #shipping_plus: ' + (e.message || e));
     }
-
 
     page.on('console', msg => {
         if (msg.type() === 'error' && msg.text().includes('Failed to load resource: the server responded with a status of 400')) {
@@ -426,7 +423,7 @@ module.exports = async function checkCheckoutForm(page, log, custom, sendTestInf
     await waitLoaderGone(page);
     log('✅ Данные тестовой карты заполнены: 4716 9348 0766 0821, 01/2030, cvv 123');
 
-    let mainResp, add3dsReq, ds3Resp;
+    let mainResp, add3dsReq, ds3Resp, stateAfterSubmit;
     try {
         const orderReqPromise = page.waitForRequest(req =>
             req.method() === 'POST' && req.url().includes('/order'), { timeout: 5000 }
@@ -461,7 +458,8 @@ module.exports = async function checkCheckoutForm(page, log, custom, sendTestInf
 
         await clickCheckoutSubmit(page, log);
 
-        const [orderReq, add3dsRequest, ds3Request, ds3Response] = await Promise.all([
+        // ⬇️ ВАЖНО: достаём также state из statePromise и сохраняем его в stateAfterSubmit
+        const [orderReq, add3dsRequest, ds3Request, ds3Response, stateFromPromise, navResult] = await Promise.all([
             orderReqPromise,
             add3dsReqPromise,
             ds3ReqPromise,
@@ -473,6 +471,7 @@ module.exports = async function checkCheckoutForm(page, log, custom, sendTestInf
         mainResp = orderReq;
         add3dsReq = add3dsRequest;
         ds3Resp = ds3Response;
+        stateAfterSubmit = stateFromPromise;
 
         if (ds3Resp && ds3Resp.status() === 400) {
             try {
@@ -544,5 +543,6 @@ module.exports = async function checkCheckoutForm(page, log, custom, sendTestInf
         });
     }
 
-    return actions;
+    // ⬇️ Возвращаем именно state, полученный из statePromise
+    return stateAfterSubmit;
 };

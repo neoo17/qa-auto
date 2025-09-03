@@ -107,7 +107,7 @@ module.exports = async function Basic(
     await shot(page, screenshotDir, 'order', log);
     await checkChoosePackages(page, stateData3.data.products, log);
     await chooseProductByCustomParam(page, log, custom, sendTestInfo, stateData3.data.products);
-    await checkCheckoutForm(page, log, custom, sendTestInfo, checkStateAjax, custom.checkType);
 
-    return stateData3;
+
+    return await checkCheckoutForm(page, log, custom, sendTestInfo, checkStateAjax, custom.checkType);
 };

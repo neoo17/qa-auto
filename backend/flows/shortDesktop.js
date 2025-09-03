@@ -75,7 +75,6 @@ module.exports = async function Basic(
 
     await checkChoosePackages(page, stateData.data.products, log);
     await chooseProductByCustomParam(page, log, custom, sendTestInfo, stateData.data.products);
-    await checkCheckoutForm(page, log, custom, sendTestInfo, checkStateAjax, custom.checkType);
 
-    return stateData;
+    return await checkCheckoutForm(page, log, custom, sendTestInfo, checkStateAjax, custom.checkType);
 };
