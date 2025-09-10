@@ -414,15 +414,65 @@
       </div>
     </transition>
   </div>
+  
+  <!-- Fixed button to clear screenshots -->
+  <button
+      class="screenshots-fab"
+      :disabled="screenshotsBusy"
+      @click="clearScreenshots"
+      :title="`Удалить все скриншоты (${screenshotsTotal})`"
+  >
+    <span class="fab-label">screenshots</span>
+    <span class="fab-icon">🗑</span>
+    <span class="fab-badge">{{ shortScreenshotsCount }}</span>
+  </button>
 </template>
 
 <script setup>
-import { ref, reactive, nextTick, watch, computed } from 'vue'
+import { ref, reactive, nextTick, watch, computed, onMounted } from 'vue'
 import Multiselect from 'vue-multiselect'
 import 'vue-multiselect/dist/vue-multiselect.css'
 
 const showParamInfo = ref(false)
 const screenshotsByTest = ref({})
+const screenshotsTotal = ref(0)
+const screenshotsBusy = ref(false)
+
+async function refreshScreenshotsCount() {
+  try {
+    const r = await fetch('http://localhost:3000/api/screenshots/count')
+    const j = await r.json()
+    screenshotsTotal.value = Number(j.count || 0)
+  } catch {
+    screenshotsTotal.value = 0
+  }
+}
+
+async function clearScreenshots() {
+  if (screenshotsBusy.value) return
+  if (!confirm('Удалить все сохранённые скриншоты?')) return
+  screenshotsBusy.value = true
+  try {
+    await fetch('http://localhost:3000/api/screenshots', { method: 'DELETE' })
+    screenshotsByTest.value = {}
+  } finally {
+    screenshotsBusy.value = false
+    await refreshScreenshotsCount()
+  }
+}
+
+onMounted(() => {
+  refreshScreenshotsCount()
+  // периодическое обновление счётчика
+  setInterval(refreshScreenshotsCount, 10000)
+})
+
+const shortScreenshotsCount = computed(() => {
+  const n = Number(screenshotsTotal.value || 0)
+  if (n >= 1000000) return Math.floor(n / 1000000) + 'm'
+  if (n >= 1000) return Math.floor(n / 1000) + 'k'
+  return String(n)
+})
 
 const flag = code => `https://flagcdn.com/24x18/${code}.png`
 
@@ -814,6 +864,7 @@ async function runAll() {
               getScreenshotsReal(tests.value[obj.stream]).then(arr => {
                 screenshotsByTest.value[tests.value[obj.stream].id] = arr
               })
+              refreshScreenshotsCount()
             }
             if (obj.type === 'testInfo') {
               if (!Array.isArray(tests.value[obj.stream].testInfo))
@@ -911,6 +962,7 @@ async function runTest(idx) {
               getScreenshotsReal(tests.value[obj.stream]).then(arr => {
                 screenshotsByTest.value[tests.value[obj.stream].id] = arr
               })
+              refreshScreenshotsCount()
             }
             if (obj.type === 'testInfo') {
               if (!Array.isArray(t.testInfo)) t.testInfo = []
@@ -934,6 +986,71 @@ body {
 
 .multiselect__option--highlight::after {
   display: none !important;
+}
+
+.screenshots-clear {
+  margin-left: 10px;
+  background: #ffe9e9;
+  border: 1px solid #ffb3b3;
+  color: #7a1f1f;
+  padding: 6px 10px;
+  border-radius: 6px;
+}
+
+.screenshots-fab {
+  position: fixed;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  border: 1px solid #d9e0f0;
+  background: #ffffff;
+  box-shadow: 0 6px 22px rgba(12, 22, 44, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1000;
+}
+.screenshots-fab:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.screenshots-fab .fab-icon {
+  font-size: 20px;
+}
+.screenshots-fab .fab-badge {
+  position: absolute;
+  bottom: -6px;
+  right: -6px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 11px;
+  background: #ff5a5a;
+  color: #fff;
+  font-size: 12px;
+  line-height: 22px;
+  text-align: center;
+  border: 2px solid #fff;
+}
+
+.screenshots-fab .fab-label {
+  position: absolute;
+  right: 64px; /* 56px btn + 8px gap */
+  top: 50%;
+  transform: translateY(-50%);
+  background: #111827;
+  color: #fff;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  letter-spacing: .2px;
+  text-transform: lowercase;
+  box-shadow: 0 6px 16px rgba(12,22,44,.18);
+  white-space: nowrap;
 }
 
 .screenshots-toggle-box {
