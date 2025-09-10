@@ -1,6 +1,19 @@
 const shot = require('../utils/screenshotHelper');
 
 function getExpectedUpsale({ upsales, profile, upsaleIndex, page }) {
+    // Приоритет: если это первый апсейл и есть количество пакетов —
+    // пытаемся найти UPGRADE по количеству независимо от SKU в URL.
+    if (upsaleIndex === 1 && profile?.product?.quantity) {
+        const qty = String(profile.product.quantity);
+        const upgradeNamePart = `upgrade-${qty}`;
+        const upgradeByQuantity = upsales.find(u => {
+            const name = (u.name || '').toLowerCase();
+            return name.includes('upgrade') && name.endsWith(upgradeNamePart);
+        });
+        if (upgradeByQuantity) return upgradeByQuantity;
+    }
+
+    // Далее — пробуем по SKU из URL
     let url = page.url();
     let match = url.match(/upsale-(\d+)\.html/);
     let skuFromUrl = match ? match[1] : null;
@@ -8,21 +21,15 @@ function getExpectedUpsale({ upsales, profile, upsaleIndex, page }) {
     let foundBySku = skuFromUrl ? upsales.find(u => String(u.sku) === skuFromUrl) : null;
 
     const isUpgrade = foundBySku && foundBySku.name && foundBySku.name.includes('upgrade');
-
     if (isUpgrade && profile?.product?.quantity) {
         const upgradeNamePart = `upgrade-${profile.product.quantity}`;
         const upgradeByQuantity = upsales.find(u =>
             u.name && u.name.includes('upgrade') && u.name.endsWith(upgradeNamePart)
         );
-        if (upgradeByQuantity) {
-            return upgradeByQuantity;
-        }
+        if (upgradeByQuantity) return upgradeByQuantity;
     }
 
-    if (foundBySku) {
-        return foundBySku;
-    }
-
+    if (foundBySku) return foundBySku;
     return upsales[upsaleIndex - 1] || null;
 }
 
@@ -229,14 +236,16 @@ module.exports = async function handleUpsales(
             await shot(page, screenshotDir, `upsale-${upsaleIndex}`, log);
         }
 
+        // Вычисляем ожидаемый апсейл ДО клика (важно для UPGRADE и действий 2/3)
+        let expectedUpsaleForThisPage = null;
         if (compareUpsales && compareUpsales.length) {
-            const expectedUpsale = getExpectedUpsale({
+            expectedUpsaleForThisPage = getExpectedUpsale({
                 upsales: compareUpsales,
                 profile: compareProfile,
                 upsaleIndex,
                 page
             });
-            await compareTitle({ page, expectedUpsale, upsaleIndex, log });
+            await compareTitle({ page, expectedUpsale: expectedUpsaleForThisPage, upsaleIndex, log });
         } else {
             log(`⚠️ Нет данных state для сравнения upsale #${upsaleIndex}`);
         }
@@ -319,7 +328,22 @@ module.exports = async function handleUpsales(
         }
 
         if (compareUpsales && compareUpsales.length) {
-            expectedUpsale = getExpectedUpsale({ upsales: compareUpsales, profile: compareProfile, upsaleIndex, page });
+            // Используем ожидаемый апсейл, вычисленный ДО клика,
+            // чтобы не перепутать со следующей страницей после навигации
+            expectedUpsale = expectedUpsaleForThisPage;
+
+            // Специслучай: на странице UPGRADE при вариантах YES=2/3
+            // сервер может вернуть SKU альтернативной кнопки. Если это так,
+            // и он существует в списке upsales — сверим по нему.
+            const actualSku = postDataParsed && postDataParsed['upsale[]'];
+            const isUpgradePage = expectedUpsale && (expectedUpsale.name || '').toLowerCase().includes('upgrade');
+            if (isUpgradePage && actualSku && String(expectedUpsale.sku) !== String(actualSku)) {
+                const byActual = compareUpsales.find(u => String(u.sku) === String(actualSku));
+                if (byActual && (byActual.name || '').toLowerCase().includes('upgrade')) {
+                    expectedUpsale = byActual;
+                }
+            }
+
             compareSku({ expectedUpsale, postDataParsed, upsaleIndex, log, sendTestInfo, action, partner });
         } else if (isDnaLike && !isYes) {
             log('🟡 [DNA] Нет skip-запроса для NO, сравнение не требуется');
