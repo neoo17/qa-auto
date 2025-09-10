@@ -22,5 +22,14 @@
     "@vitejs/plugin-vue": "^5.0.4",
     "concurrently": "^8.2.0",
     "vite": "^5.2.8"
-  }
+  },
+  "optionalDependencies": {},
+  "pnpm": {},
+  "overrides": {},
+  "resolutions": {},
+  "packageManager": "npm",
+  "config": {},
+  "keywords": [],
+  "license": "",
+  "postinstall": "playwright install"
 }
