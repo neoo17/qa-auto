@@ -1,4 +1,40 @@
 <template>
+  <!-- Top auth bar -->
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="auth-bar">
+        <template v-if="session">
+          <div class="user-chip">
+            <div class="avatar">{{ profileInitials }}</div>
+            <div class="meta">
+              <div class="name">{{ profileName }}</div>
+              <div class="role">{{ profileRole }}</div>
+            </div>
+            <button class="chip-gear" @click="openSettings" title="Настройки">⚙️</button>
+          </div>
+          <div class="user-actions">
+            <button class="tb-btn" @click="openHistory" :disabled="loadingHistory" title="История">
+              <template v-if="loadingHistory"><span class="spinner spinner-btn"></span><span>Загрузка…</span></template>
+              <template v-else><span class="ico">📦</span><span>История</span></template>
+            </button>
+            <button class="tb-btn" @click="openLeaderboard" :disabled="loadingLeaderboard" title="Рейтинг">
+              <template v-if="loadingLeaderboard"><span class="spinner spinner-btn"></span><span>Загрузка…</span></template>
+              <template v-else><span class="ico">🏆</span><span>Рейтинг</span></template>
+            </button>
+            <div class="tests-counter" :title="'Всего тестов'">
+              <span class="ico">🧪</span>
+              <span class="cnt">{{ totalTests }}</span>
+            </div>
+            <button class="tb-btn danger" @click="logout">Выйти</button>
+          </div>
+        </template>
+        <template v-else>
+          <button class="tb-btn primary" @click="showLogin = true">Войти</button>
+        </template>
+      </div>
+    </div>
+  </div>
+
   <div class="qa-container">
     <div class="qa-header">
       <h1>Женя-Боря v2.0</h1>
@@ -426,17 +462,340 @@
     <span class="fab-icon">🗑</span>
     <span class="fab-badge">{{ shortScreenshotsCount }}</span>
   </button>
+
+  <!-- Login modal -->
+  <transition name="fade">
+    <div v-if="showLogin" class="screenshot-modal" @click.self="showLogin=false">
+      <div class="screenshot-modal-content auth-card">
+        <h3 class="auth-title">Вход</h3>
+        <div class="auth-form">
+          <label>
+            <span>Email</span>
+            <input type="email" v-model="loginForm.email" placeholder="name@example.com" />
+          </label>
+          <label>
+            <span>Пароль</span>
+            <input type="password" v-model="loginForm.password" placeholder="••••••••" />
+          </label>
+
+          <div class="auth-actions">
+            <button class="tb-btn link" type="button" @click="forgotPassword" :disabled="resetLoading">
+              <span v-if="!resetLoading">Забыли пароль?</span>
+              <span v-else class="spinner spinner-btn"></span>
+            </button>
+            <div class="auth-actions-right">
+              <button class="tb-btn" @click="showLogin=false">Отмена</button>
+              <button class="tb-btn primary" @click="login" :disabled="loginLoading">
+                <span v-if="!loginLoading">Войти</span>
+                <span v-else class="spinner spinner-btn"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </transition>
+
+  <!-- History modal -->
+  <transition name="fade">
+    <div v-if="showHistory" class="screenshot-modal" @click.self="showHistory=false">
+      <div class="screenshot-modal-content" style="min-width:720px;max-width:960px;">
+        <h3 style="margin:0 0 14px 0;">История тестов</h3>
+        <div class="history-list single">
+          <div v-for="r in historyRuns" :key="'run-'+(r.id||r.ended_at)" class="history-run">
+            <div class="run-main" @click="toggleRun(r)">
+              <div class="run-text">
+                <div class="hi-url">{{ r.url }}</div>
+                <div class="hi-meta">{{ r.result }} • {{ fmtDate(r.ended_at || r.created_at) }}</div>
+              </div>
+              <button class="run-toggle" :aria-expanded="isExpanded(r)">
+                <span v-if="isExpanded(r)">▾</span>
+                <span v-else>▸</span>
+              </button>
+            </div>
+            <transition name="fade">
+              <div v-if="isExpanded(r)" class="run-bugs">
+                <div v-if="!r.bugs.length" class="history-empty">Для этого запуска багов не найдено</div>
+                <div v-for="b in r.bugs" :key="'bug-'+b.id" class="history-item bug">
+                  <div class="hi-url">{{ b.title }}</div>
+                  <div class="hi-meta"><a :href="b.url" target="_blank">{{ b.url }}</a> • {{ fmtDate(b.created_at) }}</div>
+                </div>
+              </div>
+            </transition>
+          </div>
+        </div>
+      </div>
+    </div>
+  </transition>
+
+  <!-- Leaderboard modal -->
+  <transition name="fade">
+    <div v-if="showLeaderboard" class="screenshot-modal" @click.self="showLeaderboard=false">
+      <div class="screenshot-modal-content" style="min-width:560px;max-width:880px;">
+        <h3 style="margin:0 0 10px 0;">Рейтинг</h3>
+        <ol class="leaderboard wide">
+          <li v-for="(u,idx) in leaderboard" :key="u.user_id" :class="['lb-row', rankClass(idx)]">
+            <div class="lb-left">
+              <span v-if="idx < 3" class="lb-medal">{{ medalEmoji(idx) }}</span>
+              <span class="lb-pos">#{{ idx+1 }}</span>
+              <span class="lb-name">{{ u.full_name || u.email || u.user_id }}</span>
+            </div>
+            <div class="lb-count">{{ u.tests_count }}</div>
+          </li>
+        </ol>
+      </div>
+    </div>
+  </transition>
+
+  <!-- Settings modal -->
+  <transition name="fade">
+    <div v-if="showSettings" class="screenshot-modal" @click.self="closeSettings">
+      <div class="screenshot-modal-content" style="min-width:460px;max-width:520px;">
+        <h3 style="margin:0 0 12px 0;">Настройки профиля</h3>
+        <div class="settings-form">
+          <label>
+            <span>Имя и фамилия</span>
+            <input type="text" v-model="settings.full_name" placeholder="Ваше имя" />
+          </label>
+          <label>
+            <span>Роль</span>
+            <select v-model="settings.role">
+              <option value="QA">QA</option>
+              <option value="developer">Developer</option>
+              <option value="manager">Manager</option>
+            </select>
+          </label>
+          <label>
+            <span>Новый пароль</span>
+            <input type="password" v-model="settings.password" placeholder="Оставьте пустым, чтобы не менять" />
+          </label>
+          <div class="settings-actions">
+            <button class="tb-btn" @click="closeSettings">Отмена</button>
+            <button class="tb-btn primary" :disabled="savingSettings" @click="saveSettings">
+              <span v-if="!savingSettings">Сохранить</span>
+              <span v-else class="spinner"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </transition>
 </template>
 
 <script setup>
 import { ref, reactive, nextTick, watch, computed, onMounted } from 'vue'
 import Multiselect from 'vue-multiselect'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import 'vue-multiselect/dist/vue-multiselect.css'
 
 const showParamInfo = ref(false)
 const screenshotsByTest = ref({})
 const screenshotsTotal = ref(0)
 const screenshotsBusy = ref(false)
+
+// ===== Supabase Auth/Stats =====
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || ''
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY) ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null
+const session = ref(null)
+const profile = ref(null)
+const totalTests = ref(0)
+const showLogin = ref(false)
+const loginForm = reactive({ email: '', password: '' })
+const loginLoading = ref(false)
+const resetLoading = ref(false)
+
+const profileName = computed(() => profile.value?.full_name || profile.value?.name || profile.value?.email || 'User')
+const profileInitials = computed(() => {
+  const n = (profileName.value || '').trim()
+  const parts = n.split(/\s+/)
+  return (parts[0]?.[0] || 'U') + (parts[1]?.[0] || '')
+})
+const profileRole = computed(() => profile.value?.role || 'QA')
+
+async function loadProfile() {
+  try {
+    if (!supabase || !session.value) return
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle()
+    profile.value = data || { email: user.email, full_name: user.user_metadata?.full_name || user.email, role: user.user_metadata?.role || 'QA' }
+  } catch {}
+}
+async function loadStats() {
+  try {
+    if (!session.value) { totalTests.value = 0; return }
+    const r = await fetch('http://localhost:3000/api/me/stats', { headers: { Authorization: `Bearer ${session.value.access_token}` } })
+    const j = await r.json()
+    totalTests.value = Number(j.totalTests || 0)
+  } catch { totalTests.value = 0 }
+}
+async function login() {
+  if (!supabase) { alert('Supabase не настроен'); return }
+  loginLoading.value = true
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({ email: loginForm.email.trim(), password: loginForm.password })
+    if (error) { alert('Ошибка входа: ' + error.message); return }
+    session.value = data.session
+    showLogin.value = false
+    await loadProfile(); await loadStats()
+  } finally {
+    loginLoading.value = false
+  }
+}
+async function logout() {
+  try { await supabase?.auth.signOut() } catch {}
+  session.value = null; profile.value = null; totalTests.value = 0
+}
+supabase?.auth.getSession().then(({ data }) => { session.value = data.session || null }).then(loadProfile).then(loadStats)
+supabase?.auth.onAuthStateChange((_e, s) => { session.value = s; loadProfile(); loadStats() })
+
+// history/leaderboard
+const showHistory = ref(false)
+const historyItems = ref({ runs: [], bugs: [] })
+const loadingHistory = ref(false)
+async function openHistory() {
+  if (!session.value) return
+  loadingHistory.value = true
+  try {
+    const r = await fetch('http://localhost:3000/api/me/history', { headers: { Authorization: `Bearer ${session.value.access_token}` } })
+    historyItems.value = await r.json().catch(() => ({ runs: [], bugs: [] }))
+    showHistory.value = true
+  } finally {
+    loadingHistory.value = false
+  }
+}
+const showLeaderboard = ref(false)
+const leaderboard = ref([])
+const loadingLeaderboard = ref(false)
+async function openLeaderboard() {
+  loadingLeaderboard.value = true
+  try {
+    const r = await fetch('http://localhost:3000/api/leaderboard')
+    leaderboard.value = await r.json().catch(() => [])
+    showLeaderboard.value = true
+  } finally {
+    loadingLeaderboard.value = false
+  }
+}
+
+function rankClass(idx){
+  if (idx === 0) return 'gold'
+  if (idx === 1) return 'silver'
+  if (idx === 2) return 'bronze'
+  return 'plain'
+}
+function medalEmoji(idx){
+  return idx === 0 ? '👑' : idx === 1 ? '🥈' : '🥉'
+}
+
+// Merge bugs by nearest time per run (±2 минуты) и той же ссылке
+const expandedRuns = ref({})
+function keyOfRun(r){ return String(r.id || (r.url + '|' + (r.ended_at || r.created_at))) }
+function isExpanded(r){ return !!expandedRuns.value[keyOfRun(r)] }
+function toggleRun(r){ const k = keyOfRun(r); expandedRuns.value[k] = !expandedRuns.value[k] }
+function fmtDate(dt){ try { return new Date(dt).toLocaleString() } catch { return dt } }
+const historyRuns = computed(() => {
+  const runsRaw = (historyItems.value.runs || []).map(r => ({ ...r }))
+  const bugsRaw = (historyItems.value.bugs || []).map(b => ({ ...b }))
+
+  // group runs and bugs by exact URL
+  const byUrlRuns = new Map()
+  const byUrlBugs = new Map()
+  for (const r of runsRaw) {
+    const arr = byUrlRuns.get(r.url) || []
+    arr.push(r); byUrlRuns.set(r.url, arr)
+  }
+  for (const b of bugsRaw) {
+    const arr = byUrlBugs.get(b.url) || []
+    arr.push(b); byUrlBugs.set(b.url, arr)
+  }
+
+  // For each URL assign each bug to the nearest run by time (no duplicates)
+  const result = []
+  const ms = (d) => { try { return new Date(d).getTime() } catch { return 0 } }
+  for (const [url, runs] of byUrlRuns.entries()) {
+    const bugs = (byUrlBugs.get(url) || [])
+    // sort by time ascending
+    runs.sort((a,b) => ms(a.ended_at || a.created_at) - ms(b.ended_at || b.created_at))
+    bugs.sort((a,b) => ms(a.created_at) - ms(b.created_at))
+    // precompute midpoints between consecutive runs
+    const times = runs.map(r => ms(r.ended_at || r.created_at))
+    const mids = []
+    for (let i=0; i<times.length-1; i++) mids.push((times[i] + times[i+1]) / 2)
+    // init bugs containers
+    for (const r of runs) r.bugs = []
+    // assign each bug to nearest run deterministically
+    for (const b of bugs) {
+      const t = ms(b.created_at)
+      if (runs.length === 0) continue
+      if (runs.length === 1) { runs[0].bugs.push(b); continue }
+      // find index k such that t <= mids[k] → assign to run k, else last
+      let k = mids.findIndex(m => t <= m)
+      if (k === -1) k = runs.length - 1
+      runs[k].bugs.push(b)
+    }
+    result.push(...runs)
+  }
+  // include runs whose URL has no bugs group
+  for (const [url, runs] of byUrlRuns.entries()) {
+    if (byUrlBugs.has(url)) continue
+    for (const r of runs) { r.bugs = []; result.push(r) }
+  }
+  // sort final by time desc
+  result.sort((a,b) => ms(b.ended_at || b.created_at) - ms(a.ended_at || a.created_at))
+  return result
+})
+
+// Settings modal
+const showSettings = ref(false)
+const savingSettings = ref(false)
+const settings = reactive({ full_name: '', role: 'QA', password: '' })
+function openSettings() {
+  settings.full_name = profile.value?.full_name || ''
+  settings.role = profile.value?.role || 'QA'
+  settings.password = ''
+  showSettings.value = true
+}
+function closeSettings() { showSettings.value = false }
+async function saveSettings() {
+  if (!supabase || !session.value) return
+  savingSettings.value = true
+  try {
+    // Update auth user metadata and password
+    const payload = { data: { full_name: settings.full_name, role: settings.role } }
+    if (settings.password && settings.password.length >= 6) payload.password = settings.password
+    const { error: authErr } = await supabase.auth.updateUser(payload)
+    if (authErr) throw authErr
+    // Upsert profile row as well
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      await supabase.from('profiles').upsert({ id: user.id, full_name: settings.full_name, role: settings.role }, { onConflict: 'id' })
+    }
+    await loadProfile();
+    // refresh leaderboard to reflect name change
+    try { const r = await fetch('http://localhost:3000/api/leaderboard'); leaderboard.value = await r.json() } catch {}
+    closeSettings()
+  } catch (e) {
+    alert('Не удалось сохранить: ' + (e.message || e))
+  } finally {
+    savingSettings.value = false
+  }
+}
+
+async function forgotPassword() {
+  if (!supabase) { alert('Supabase не настроен'); return }
+  const email = (loginForm.email || '').trim()
+  if (!email) { alert('Введите email, чтобы восстановить пароль'); return }
+  resetLoading.value = true
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin })
+    if (error) { alert('Не удалось отправить письмо: ' + error.message); return }
+    alert('Письмо с ссылкой для восстановления отправлено на ' + email)
+  } finally {
+    resetLoading.value = false
+  }
+}
 
 async function refreshScreenshotsCount() {
   try {
@@ -828,7 +1187,7 @@ async function runAll() {
   }))
   const response = await fetch('http://localhost:3000/api/run-multi-test', {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
+    headers: { 'Content-Type': 'application/json', ...(session.value ? { Authorization: `Bearer ${session.value.access_token}` } : {}) },
     body: JSON.stringify({tests: testsData}),
   })
   const reader = response.body.getReader()
@@ -865,6 +1224,21 @@ async function runAll() {
                 screenshotsByTest.value[tests.value[obj.stream].id] = arr
               })
               refreshScreenshotsCount()
+              // refresh user stats after each finished stream
+              try { await loadStats() } catch {}
+              // send found errors as bugs
+              try {
+                if (session.value) {
+                  const errs = (tests.value[obj.stream].errors || []).slice(0, 50)
+                  if (errs.length) {
+                    await fetch('http://localhost:3000/api/me/bugs', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.value.access_token}` },
+                      body: JSON.stringify({ bugs: errs.map(s => ({ title: String(s).slice(0, 500), url: tests.value[obj.stream].url })) })
+                    })
+                  }
+                }
+              } catch {}
             }
             if (obj.type === 'testInfo') {
               if (!Array.isArray(tests.value[obj.stream].testInfo))
@@ -926,7 +1300,7 @@ async function runTest(idx) {
 
   const response = await fetch('http://localhost:3000/api/run-multi-test', {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
+    headers: { 'Content-Type': 'application/json', ...(session.value ? { Authorization: `Bearer ${session.value.access_token}` } : {}) },
     body: JSON.stringify({tests: testsData}),
   })
   const reader = response.body.getReader()
@@ -963,6 +1337,19 @@ async function runTest(idx) {
                 screenshotsByTest.value[tests.value[obj.stream].id] = arr
               })
               refreshScreenshotsCount()
+              try { await loadStats() } catch {}
+              try {
+                if (session.value) {
+                  const errs = (t.errors || []).slice(0, 50)
+                  if (errs.length) {
+                    await fetch('http://localhost:3000/api/me/bugs', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.value.access_token}` },
+                      body: JSON.stringify({ bugs: errs.map(s => ({ title: String(s).slice(0, 500), url: t.url })) })
+                    })
+                  }
+                }
+              } catch {}
             }
             if (obj.type === 'testInfo') {
               if (!Array.isArray(t.testInfo)) t.testInfo = []
@@ -983,6 +1370,63 @@ body {
   font-family: system-ui, sans-serif;
   background: #f6f8fb;
 }
+
+/* ===== Topbar ===== */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  backdrop-filter: saturate(140%) blur(6px);
+  background: rgba(248, 251, 255, 0.86);
+  border-bottom: 1px solid #e8eefc;
+}
+.topbar-inner { max-width: 1200px; margin: 0 auto; padding: 10px 16px; display:flex; align-items:center; }
+.auth-bar { display:flex; align-items:center; gap:14px; width:100%; justify-content: space-between; }
+.user-chip {
+  display:grid;
+  grid-template-columns: 36px 1fr 36px;
+  align-items:center;
+  gap:12px;
+  padding:10px 12px;
+  background:#f5f9ff;
+  border:1px solid #dbe7ff;
+  border-radius:14px;
+  box-shadow: 0 1px 0 #fff inset;
+}
+.user-chip .avatar {
+  width:36px; height:36px; border-radius:10px;
+  background:#e8eeff; border:1px solid #dbe7ff;
+  display:flex; align-items:center; justify-content:center;
+  font-weight:700; font-size:16px; color:#173a83;
+  line-height:1; text-transform: uppercase;
+  box-shadow: 0 1px 0 #fff inset;
+}
+.user-chip .meta { display:flex; flex-direction:column; line-height:1.1; }
+.user-chip .name { font-weight:900; color:#0a1c35; letter-spacing:-.02em; margin-bottom:2px; }
+.user-chip .role {
+  display:inline-block; align-self:flex-start;
+  font-size:.82em; color:#314868; font-weight:600;
+  background:#f4f0ff; border:1px solid #ebe3ff;
+  padding:4px 10px; border-radius:999px; letter-spacing:0;
+}
+.user-chip .chip-gear {
+  background:#ffffff; border:1px solid #d7e3ff;
+  width:36px; height:36px; padding:0; border-radius:10px;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  font-size:16px; line-height:1;
+  transition: transform .06s ease, background .2s ease, border .2s ease, box-shadow .2s ease;
+  box-shadow: 0 2px 8px rgba(25,40,80,.06);
+}
+.user-chip .chip-gear:hover { background:#e8f0ff; }
+.user-chip .chip-gear:active { transform: translateY(1px); }
+.user-actions { display:flex; align-items:center; gap:10px; }
+.tb-btn { display:flex; align-items:center; gap:8px; padding:8px 14px; background:#ffffff; border:1px solid #d7dff1; color:#0b1830; border-radius:10px; box-shadow: 0 2px 8px rgba(25,40,80,.06); }
+.tb-btn .ico { font-size:16px; }
+.tb-btn:hover { background:#f7faff; }
+.tb-btn.primary { background:#1f6feb; color:#fff; border-color:#1b61cf; box-shadow: 0 6px 16px rgba(37,99,235,.3); }
+.tb-btn.danger { background:#fff2f2; color:#7a1f1f; border-color:#ffd6d6; }
+.tests-counter { display:flex; align-items:center; gap:6px; padding:8px 14px; background:#f5f9ff; border:1px solid #dbe7ff; border-radius:12px; color:#0a2b6d; font-weight:800; }
+.tests-counter .cnt { font-size:20px; }
 
 .multiselect__option--highlight::after {
   display: none !important;
@@ -1199,6 +1643,65 @@ body {
   font-weight: 600;
   text-align: center;
 }
+
+/* ===== Auth & Meta ===== */
+.auth-bar { display:flex; align-items:center; gap:12px; }
+.user-chip { display:flex; align-items:center; gap:10px; padding:6px 10px; border:1px solid #e7ebfa; border-radius:10px; background: #f7faff; }
+.user-chip .avatar { width:28px; height:28px; border-radius:6px; background:#e3ebff; display:flex; align-items:center; justify-content:center; font-weight:700; color:#1a3d8f; }
+.user-chip .name { font-weight:700; line-height:1.1; color:#0a1c35; }
+.user-chip .role { font-size:.85em; color: #5b6f95; }
+.user-actions { display:flex; align-items:center; gap:8px; }
+.user-actions .tests-counter { padding:6px 10px; background:#f7faff; border:1px solid #e7ebfa; border-radius:10px; color:#1a3d8f; }
+.login-btn { background: linear-gradient(180deg, #233048 0%, #141b2d 100%); border-color:#2b3a55; color:#fff; }
+
+.history-list { display:flex; flex-direction:column; gap:10px; width:100%; max-height:65vh; overflow:auto; }
+.history-two-cols { display:grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.history-list.single { display:flex; flex-direction:column; gap:12px; width:100%; max-height:65vh; overflow:auto; }
+.history-run { border:1px solid #e7ebfa; border-radius:12px; background:#fff; }
+.run-main { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 14px; cursor:pointer; }
+.run-main:hover { background:#f7faff; }
+.run-main .run-toggle { background:#eef4ff; border:1px solid #d7e3ff; border-radius:8px; padding:4px 8px; cursor:pointer; }
+.run-bugs { padding: 6px 14px 12px 14px; border-top:1px dashed #e7ebfa; display:flex; flex-direction:column; gap:8px; }
+.history-item { border:1px solid #e7ebfa; border-radius:10px; padding:10px 12px; background:#fff; }
+.history-item .hi-url { font-weight:700; color:#0a1c35; }
+.history-item .hi-meta { color:#5b6f95; font-size:.9em; margin-top:4px; }
+.history-item.bug { border-color:#ffe0e0; background:#fff7f7; }
+.history-title { font-weight:800; color:#0a1c35; margin-bottom:8px; }
+.history-empty { color:#7e8dab; font-style: italic; }
+
+.leaderboard { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; }
+.leaderboard.wide { width:100%; }
+.leaderboard.wide .lb-row { width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; border:1px solid #e7ebfa; background:#fff; border-radius:12px; padding:12px 16px; }
+.leaderboard.wide .lb-left { display:flex; align-items:center; gap:6px; }
+.leaderboard.wide .lb-medal { font-size:18px; margin-right:2px; }
+.leaderboard.wide .lb-pos { color:#1a3d8f; font-weight:800; width:40px; text-align:center; }
+.leaderboard.wide .lb-name { flex:1; color:#0a1c35; font-weight:800; letter-spacing:-.01em; }
+.leaderboard.wide .lb-count { font-weight:900; color:#0a2b6d; background:#f0f6ff; border:1px solid #dbe7ff; padding:6px 12px; border-radius:10px; min-width:46px; text-align:center; }
+/* podium styles */
+.leaderboard.wide .lb-row.gold { background: linear-gradient(180deg,#fff8e6,#fff3c4); border-color:#f7e39a; }
+.leaderboard.wide .lb-row.silver { background: linear-gradient(180deg,#f7f9ff,#eef2ff); border-color:#dfe5ff; }
+.leaderboard.wide .lb-row.bronze { background: linear-gradient(180deg,#fff3ec,#ffe4d6); border-color:#ffd1b8; }
+
+/* Settings modal */
+.settings-form { display:flex; flex-direction:column; gap:12px; width:100%; }
+.settings-form label { display:flex; flex-direction:column; gap:6px; font-weight:700; color:#0a1c35; }
+.settings-form input[type="text"],
+.settings-form input[type="password"],
+.settings-form select { background:#f7faff; border:1px solid #dbe7ff; border-radius:10px; padding:10px 12px; }
+.settings-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:6px; }
+.spinner { width:18px; height:18px; border:2px solid #fff; border-top-color: transparent; border-radius:50%; display:inline-block; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg) } }
+.spinner-btn { width:16px; height:16px; border-color:#6b8fc1; border-top-color: transparent; margin-right:6px; }
+
+/* Auth modal */
+.auth-card { min-width: 380px; max-width: 420px; }
+.auth-title { margin:0 0 12px 0; }
+.auth-form { display:flex; flex-direction:column; gap:12px; width:100%; }
+.auth-form label { display:flex; flex-direction:column; gap:6px; font-weight:700; color:#0a1c35; }
+.auth-form input { background:#f7faff; border:1px solid #dbe7ff; border-radius:10px; padding:10px 12px; }
+.auth-actions { display:flex; align-items:center; justify-content:space-between; margin-top:6px; }
+.auth-actions-right { display:flex; gap:8px; }
+.tb-btn.link { background:transparent; border:1px dashed #d0dcf5; color:#1a3d8f; }
 
 @media (max-width: 700px) {
   .modal-image {
