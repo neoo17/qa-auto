@@ -84,7 +84,7 @@ module.exports = async function shortMobile(
         await testGdprBlockAdvanced(page, log, country, custom.partner, "checkout");
         await checkAllPopups(page, log, custom.partner, "shipping");
     }
-    if (custom.partner === 'ga' || custom.partner === 'gh') {
+    if (custom.partner === 'ga' || custom.partner === 'hg') {
         await checkSelectStateISOLookup(page, country, log, 'select[name="state"]')
     }
 

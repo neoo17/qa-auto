@@ -37,8 +37,39 @@ module.exports = async function checkPunctuation(page, log, countryCode) {
             if (el.closest('[hidden], [aria-hidden="true"]')) return false;
             const cs = window.getComputedStyle(el);
             if (!cs) return false;
-            if (cs.display === 'none' || cs.visibility === 'hidden') return false;
+            if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') return false;
+            const rects = el.getClientRects ? el.getClientRects() : null;
+            if (rects && rects.length === 0) return false;
             return true;
+        };
+
+        const isControlVisible = (ctrl) => {
+            if (!ctrl) return false;
+            const type = (ctrl.getAttribute && ctrl.getAttribute('type')) || '';
+            if (type && type.toLowerCase() === 'hidden') return false;
+            return isVis(ctrl);
+        };
+
+        const findAssociatedControls = (el) => {
+            const controls = [];
+            // If label -> use 'for' and nested controls
+            const label = el.closest && el.closest('label');
+            if (label) {
+                const forId = label.getAttribute('for');
+                if (forId) {
+                    const byId = document.getElementById(forId);
+                    if (byId) controls.push(byId);
+                }
+                label.querySelectorAll && controls.push(...label.querySelectorAll('input,select,textarea'));
+            }
+            // Common form containers
+            if (controls.length === 0) {
+                const container = el.closest && el.closest('form, .form, .form-group, .form__group, .field, .form-field, .input, .form-row, .control');
+                if (container && container.querySelectorAll) {
+                    controls.push(...container.querySelectorAll('input,select,textarea'));
+                }
+            }
+            return controls;
         };
 
         const walker = document.createTreeWalker(
@@ -59,6 +90,13 @@ module.exports = async function checkPunctuation(page, log, countryCode) {
             if (el.closest('noscript,script,style,template,svg')) continue;
 
             if (!isVis(el)) continue;
+
+            // Skip label-like texts when their associated controls are hidden
+            const associated = findAssociatedControls(el);
+            if (associated.length > 0) {
+                const anyVisible = Array.from(associated).some(isControlVisible);
+                if (!anyVisible) continue;
+            }
 
             const t = node.textContent;
             if (/<[^>]+>/.test(t) || /=\s*["'][^"']*["']/.test(t)) continue;

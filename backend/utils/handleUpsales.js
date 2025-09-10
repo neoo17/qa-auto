@@ -73,15 +73,17 @@ function compareSku({ expectedUpsale, postDataParsed, upsaleIndex, log, sendTest
     }
 
     if (typeof sendTestInfo === 'function') {
+        const isYes = action === 1 || action === 2 || action === 3;
+        const isDnaLike = (partner === 'dnav3' || partner === 'newdna');
         let url;
-        if (action === 1) {
-            url = (partner === 'dnav3' || partner === 'newdna') ? 'ajax/upsale' : 'ajax/add-upsale';
+        if (isYes) {
+            url = isDnaLike ? 'ajax/upsale' : 'ajax/add-upsale';
         } else {
-            url = (partner === 'dnav3' || partner === 'newdna') ? null : 'ajax/skip-upsells';
+            url = isDnaLike ? null : 'ajax/skip-upsells';
         }
         if (url) {
             sendTestInfo({
-                _section: action === 1 ? 'YES' : 'NO',
+                _section: isYes ? 'YES' : 'NO',
                 url,
                 data: { 'upsale[]': actualSku }
             });

@@ -27,10 +27,12 @@ module.exports = async function checkShippingForm(page, log, countryCode) {
             if (isSelect && name === 'country') {
                 try {
                     const selectedValue = await page.$eval(inputSel, el => el.value);
-                    if ((selectedValue || '').toLowerCase() === (countryCode || '').toLowerCase()) {
-                        log(`✅ [${name}] выбрано правильное значение: "${selectedValue}"`);
+                    const expectedCountry = (((countryCode || '').split(/[-_]/)[0]) || '').toUpperCase();
+                    const actualCountry = (selectedValue || '').toUpperCase();
+                    if (actualCountry === expectedCountry) {
+                        log(`✅ [${name}] выбрано правильное значение: "${actualCountry}"`);
                     } else {
-                        log(`❌ [${name}] выбрано неверное значение! Ожидали: "${countryCode}", получили: "${selectedValue}"`);
+                        log(`❌ [${name}] выбрано неверное значение! Ожидали: "${expectedCountry}", получили: "${actualCountry}"`);
                     }
                 } catch {
                     log(`❌ [${name}] не удалось получить выбранное значение`);
