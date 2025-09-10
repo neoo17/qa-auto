@@ -163,7 +163,10 @@ app.get('/api/me/stats', async (req, res) => {
         if (!user?.id) return res.status(401).json({ error: 'Unauthorized' })
         const stats = await getUserStats(user.id)
         res.json(stats)
-    } catch (e) { res.status(500).json({ error: String(e.message || e) }) }
+    } catch (e) {
+        // не роняем UI — возвращаем 200 с totalTests:0 и сообщением
+        res.json({ totalTests: 0, error: String(e.message || e) })
+    }
 })
 
 app.get('/api/me/history', async (req, res) => {

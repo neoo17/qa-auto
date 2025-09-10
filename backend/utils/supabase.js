@@ -102,17 +102,41 @@ async function insertBug(userId, payload) {
 }
 
 async function getUserStats(userId) {
-  const url = rest(`/test_runs?user_id=eq.${encodeURIComponent(userId)}&select=count`) + '&head=true'
-  const res = await fetch(url, { headers: { apikey: SUPABASE_SERVICE_ROLE, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}` }})
-  // PostgREST returns count in header `content-range: */<count>` when `Prefer: count=exact` but head=true may not.
-  // Fallback: query with rpc
-  const rpc = `${SUPABASE_URL}/rest/v1/rpc/count_user_tests`
-  const rpcRes = await fetch(rpc, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_SERVICE_ROLE, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}` },
-    body: JSON.stringify({ uid: userId })
-  })
-  if (rpcRes.ok) { const n = await rpcRes.json(); return { totalTests: Number(n) || 0 } }
+  try {
+    // Prefer RPC if available
+    const rpc = `${SUPABASE_URL}/rest/v1/rpc/count_user_tests`
+    const rpcRes = await fetch(rpc, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: SUPABASE_SERVICE_ROLE, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}` },
+      body: JSON.stringify({ uid: userId })
+    })
+    if (rpcRes.ok) {
+      const n = await rpcRes.json();
+      return { totalTests: Number(n) || 0 }
+    }
+  } catch {}
+
+  // Fallback: GET with count via Content-Range
+  try {
+    const url = rest(`/test_runs?user_id=eq.${encodeURIComponent(userId)}&select=id`)
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE,
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}`,
+        Prefer: 'count=exact'
+      }
+    })
+    if (res.ok) {
+      const cr = res.headers.get('content-range') || ''
+      const m = cr.match(/\*\/(\d+)/)
+      if (m) return { totalTests: Number(m[1]) || 0 }
+      // fallback: count array length if small
+      const arr = await res.json().catch(() => [])
+      if (Array.isArray(arr)) return { totalTests: arr.length }
+    }
+  } catch {}
+
   return { totalTests: 0 }
 }
 
