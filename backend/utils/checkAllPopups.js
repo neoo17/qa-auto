@@ -22,8 +22,9 @@ module.exports = async function checkAllPopups(page, log, partner, pageName) {
     }
 
     let affiliatesFound = false;
+    let affiliatesHref = null;
     for (const link of visibleLinks) {
-        const found = await link.evaluate(el => {
+        const href = await link.evaluate(el => {
             let parent = el.parentElement;
             while (parent && !['UL','OL','NAV','DIV','SECTION','FOOTER','BODY'].includes(parent.tagName)) {
                 parent = parent.parentElement;
@@ -39,17 +40,26 @@ module.exports = async function checkAllPopups(page, log, partner, pageName) {
                     node.textContent.trim() === 'Affiliates'
                 );
             });
-            return !!a;
+            return a ? (a.getAttribute('href') || '') : '';
         });
-        if (found) {
+        if (href) {
             affiliatesFound = true;
+            affiliatesHref = href;
             break;
         }
     }
 
     if (partner === 'ga' || partner === 'hg') {
         if (affiliatesFound) {
-            log(`✅[${pageName}] Найдена видимая ссылка Affiliates`);
+            // normalize and validate exact URL
+            const expected = 'https://57hecuhyj2f.typeform.com/to/m76gIX0w';
+            const norm = (u) => String(u || '').trim().replace(/\/$/, '').toLowerCase();
+            const ok = norm(affiliatesHref) === norm(expected);
+            if (ok) {
+                log(`✅[${pageName}] Найдена ссылка Affiliates и ведёт на верный URL`);
+            } else {
+                log(`❌[${pageName}] Ссылка Affiliates ведёт на неверный URL. Ожидали: "${expected}", получили: "${affiliatesHref || '—'}"`);
+            }
         } else {
             log(`❌[${pageName}] Для партнёра ga/hg не найдена ссылка Affiliates`);
         }
