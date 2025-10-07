@@ -62,6 +62,42 @@ async function insertTestRun(userId, payload) {
     const t = await res.text().catch(() => '')
     throw new Error(`Supabase insertTestRun failed: ${res.status} ${t}`)
   }
+  try {
+    await trimTestRuns(userId, 100)
+  } catch {}
+}
+
+async function trimTestRuns(userId, keep = 100) {
+  if (!userId || keep < 0) return
+  const offset = Math.max(keep, 0)
+  try {
+    const listUrl = rest(`/test_runs?user_id=eq.${encodeURIComponent(userId)}&select=id&order=ended_at.desc.nullslast&order=created_at.desc.nullslast&offset=${offset}&limit=1000`)
+    const res = await fetch(listUrl, {
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE,
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}`
+      }
+    })
+    if (!res.ok) return
+    const rows = await res.json().catch(() => [])
+    if (!Array.isArray(rows) || !rows.length) return
+    const ids = rows.map(r => r.id).filter(Boolean)
+    if (!ids.length) return
+    const chunkSize = 100
+    for (let i = 0; i < ids.length; i += chunkSize) {
+      const chunk = ids.slice(i, i + chunkSize)
+      const filter = `in.(${chunk.map(id => `"${id}"`).join(',')})`
+      const deleteUrl = rest(`/test_runs?id=${encodeURIComponent(filter)}&user_id=eq.${encodeURIComponent(userId)}`)
+      await fetch(deleteUrl, {
+        method: 'DELETE',
+        headers: {
+          apikey: SUPABASE_SERVICE_ROLE,
+          Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}`,
+          Prefer: 'return=minimal'
+        }
+      })
+    }
+  } catch {}
 }
 
 async function ensureProfileFromUser(user) {

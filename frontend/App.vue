@@ -1592,7 +1592,7 @@ body {
   position: relative;
   background: #fff;
   border-radius: 10px;
-  padding: 20px 48px;
+  padding: 20px 20px;
   min-width: 340px;
   min-height: 340px;
   display: flex;
@@ -1671,7 +1671,7 @@ body {
 
 .leaderboard { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; }
 .leaderboard.wide { width:100%; }
-.leaderboard.wide .lb-row { width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; border:1px solid #e7ebfa; background:#fff; border-radius:12px; padding:12px 16px; }
+.leaderboard.wide .lb-row { width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; box-sizing: border-box; border:1px solid #e7ebfa; background:#fff; border-radius:12px; padding:12px 16px; }
 .leaderboard.wide .lb-left { display:flex; align-items:center; gap:6px; }
 .leaderboard.wide .lb-medal { font-size:18px; margin-right:2px; }
 .leaderboard.wide .lb-pos { color:#1a3d8f; font-weight:800; width:40px; text-align:center; }
@@ -1733,7 +1733,7 @@ body {
   position: relative;
   background: #fff;
   border-radius: 10px;
-  padding: 20px 48px;
+  padding: 20px 20px;
   min-width: 340px;
   min-height: 340px;
   display: flex;

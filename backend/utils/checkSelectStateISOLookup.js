@@ -17,6 +17,11 @@ async function fetchIsoRegionsFromWiki(countryCode, lang = 'en') {
     const html = await res.text();
     const $ = cheerio.load(html);
 
+    const countryUpper = countryCode.toUpperCase();
+    if (countryUpper === 'CA' && lang === 'en') {
+        return parseCanadaEnTable($, countryUpper);
+    }
+
     const regions = [];
     $('table.wikitable').each((tableIdx, table) => {
         $(table).find('tbody tr').each((i, row) => {
@@ -28,7 +33,7 @@ async function fetchIsoRegionsFromWiki(countryCode, lang = 'en') {
 
             for (let idx = 0; idx < 2; idx++) {
                 const cellText = tds.eq(idx).text().trim();
-                if (cellText.startsWith(countryCode.toUpperCase() + '-')) {
+                if (cellText.startsWith(countryUpper + '-')) {
                     codeText = cellText;
                     // ИСПОЛЬЗУЙ ЭТУ ЛОГИКУ:
                     nameText = null;
@@ -69,6 +74,45 @@ function cleanLabel(label) {
 }
 function cleanRegionName(name) {
     return name.replace(/\s*\(([a-z]{2,4})\)\s*$/i, '').trim();
+}
+
+function parseCanadaEnTable($, countryUpper) {
+    const regions = [];
+    const table = $('table.wikitable').filter((i, el) => {
+        const $el = $(el);
+        return /plainrowheaders/.test($el.attr('class') || '') && /sortable/.test($el.attr('class') || '');
+    }).first();
+    if (!table.length) return regions;
+
+    table.find('tbody tr').each((i, row) => {
+        const $row = $(row);
+        const codeCell = $row.find('th[scope="row"]');
+        if (!codeCell.length) return;
+        const codeText = cleanWikiText(codeCell.text());
+        if (!codeText || !codeText.startsWith(`${countryUpper}-`)) return;
+
+        const nameCell = $row.find('td').first();
+        if (!nameCell.length) return;
+        const nameText = cleanWikiText(nameCell.clone());
+        if (!nameText) return;
+
+        regions.push({
+            code: codeText.replace(`${countryUpper}-`, ''),
+            fullCode: codeText,
+            name: nameText,
+        });
+    });
+    return regions;
+}
+
+function cleanWikiText(input) {
+    if (typeof input === 'string') {
+        return input.replace(/\[[^\]]*\]/g, '').replace(/\s+/g, ' ').trim();
+    }
+    const $el = input;
+    $el.find('sup, .reference, style').remove();
+    $el.find('span.flagicon, img').remove();
+    return $el.text().replace(/\[[^\]]*\]/g, '').replace(/\s+/g, ' ').trim();
 }
 
 module.exports = async function checkSelectOptionsISOAndNamesViaWiki(page, rawCountryCode, log, selector = 'select[name="state"]') {
