@@ -32,6 +32,63 @@ function rest(pathname) {
   return `${SUPABASE_URL}/rest/v1${pathname}`
 }
 
+async function incrementUserTotal(userId, delta = 1) {
+  if (!userId || !delta) return
+  const current = await getUserTotal(userId)
+  const next = (current || 0) + delta
+  await upsertUserTotal(userId, next)
+}
+
+async function getUserTotal(userId) {
+  if (!userId) return 0
+  const url = rest(`/test_run_totals?user_id=eq.${encodeURIComponent(userId)}&select=total&limit=1`)
+  const res = await fetch(url, {
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}`
+    }
+  })
+  if (!res.ok) return 0
+  const rows = await res.json().catch(() => [])
+  if (!Array.isArray(rows) || !rows.length) return 0
+  const row = rows[0]
+  return Number(row.total) || 0
+}
+
+async function upsertUserTotal(userId, total) {
+  if (!userId) return
+  const url = rest('/test_run_totals')
+  await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      apikey: SUPABASE_SERVICE_ROLE,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}`,
+      Prefer: 'resolution=merge-duplicates,return=minimal'
+    },
+    body: JSON.stringify([{ user_id: userId, total }])
+  }).catch(() => {})
+}
+
+async function getAllUserTotals() {
+  const url = rest('/test_run_totals?select=user_id,total')
+  const res = await fetch(url, {
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}`
+    }
+  })
+  if (!res.ok) return {}
+  const rows = await res.json().catch(() => [])
+  if (!Array.isArray(rows)) return {}
+  const map = {}
+  for (const r of rows) {
+    if (!r.user_id) continue
+    map[r.user_id] = Number(r.total) || 0
+  }
+  return map
+}
+
 async function getUserFromToken(accessToken) {
   if (!SUPABASE_URL) throw new Error('SUPABASE_URL not set')
   if (!accessToken) return null
@@ -62,6 +119,9 @@ async function insertTestRun(userId, payload) {
     const t = await res.text().catch(() => '')
     throw new Error(`Supabase insertTestRun failed: ${res.status} ${t}`)
   }
+  try {
+    await incrementUserTotal(userId, 1)
+  } catch {}
   try {
     await trimTestRuns(userId, 100)
   } catch {}
@@ -139,6 +199,13 @@ async function insertBug(userId, payload) {
 
 async function getUserStats(userId) {
   try {
+    const totalFromTotals = await getUserTotal(userId)
+    if (Number.isFinite(totalFromTotals)) {
+      return { totalTests: Number(totalFromTotals) || 0 }
+    }
+  } catch {}
+
+  try {
     // Prefer RPC if available
     const rpc = `${SUPABASE_URL}/rest/v1/rpc/count_user_tests`
     const rpcRes = await fetch(rpc, {
@@ -202,29 +269,26 @@ async function getLeaderboard(limit = 20) {
 
   // Fallback: aggregate on the Node side
   try {
-    const res = await fetch(rest(`/test_runs?select=user_id`), {
-      headers: { apikey: SUPABASE_SERVICE_ROLE, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}` }
-    })
-    if (!res.ok) return []
-    const rows = await res.json()
-    const map = new Map()
-    for (const r of rows) {
-      const id = r.user_id
-      map.set(id, (map.get(id) || 0) + 1)
+    const totalsMap = await getAllUserTotals()
+    let items = Object.entries(totalsMap)
+      .filter(([user_id]) => !!user_id)
+      .map(([user_id, tests_count]) => ({ user_id, tests_count: Number(tests_count) || 0 }))
+    if (!items.length) return []
+    items.sort((a,b) => b.tests_count - a.tests_count)
+    items = items.slice(0, limit)
+
+    const ids = items.map(it => it.user_id)
+    let nameById = new Map()
+    if (ids.length) {
+      const filter = `in.(${ids.map(id => `"${id}"`).join(',')})`
+      const profileRes = await fetch(rest(`/profiles?id=${encodeURIComponent(filter)}&select=id,full_name`), {
+        headers: { apikey: SUPABASE_SERVICE_ROLE, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}` }
+      })
+      const profiles = profileRes.ok ? await profileRes.json() : []
+      nameById = new Map(profiles.map(p => [p.id, p.full_name]))
     }
-    // try fetch profiles for names
-    const profileRes = await fetch(rest(`/profiles?select=id,full_name`), {
-      headers: { apikey: SUPABASE_SERVICE_ROLE, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}` }
-    })
-    const profiles = profileRes.ok ? await profileRes.json() : []
-    const nameById = new Map(profiles.map(p => [p.id, p.full_name]))
-    let items = Array.from(map.entries()).map(([user_id, tests_count]) => ({
-      user_id,
-      tests_count,
-      full_name: nameById.get(user_id) || null
-    }))
-    // Fetch emails for users without profile names using Auth admin API
-    const needEmail = items.filter(it => !it.full_name).map(it => it.user_id)
+
+    const needEmail = items.filter(it => !nameById.get(it.user_id)).map(it => it.user_id)
     const emails = {}
     await Promise.all(needEmail.map(async (uid) => {
       try {
@@ -237,9 +301,13 @@ async function getLeaderboard(limit = 20) {
         }
       } catch {}
     }))
-    items = items.map(it => ({ ...it, email: emails[it.user_id] || null }))
-    items.sort((a,b) => b.tests_count - a.tests_count)
-    return items.slice(0, limit)
+
+    return items.map(it => ({
+      user_id: it.user_id,
+      tests_count: it.tests_count,
+      full_name: nameById.get(it.user_id) || null,
+      email: emails[it.user_id] || null
+    }))
   } catch {
     return []
   }
