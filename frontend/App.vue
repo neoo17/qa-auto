@@ -543,6 +543,9 @@
             <div class="lb-count">{{ u.tests_count }}</div>
           </li>
         </ol>
+        <p class="donation-note">
+          🥤 Хочешь удвоить очки? Задонать разработчику на кофе — слухи говорят, что тогда тесты бегают быстрее 😊
+        </p>
       </div>
     </div>
   </transition>
@@ -622,13 +625,18 @@ async function loadProfile() {
     profile.value = data || { email: user.email, full_name: user.user_metadata?.full_name || user.email, role: user.user_metadata?.role || 'QA' }
   } catch {}
 }
-async function loadStats() {
+async function loadStats(opts = {}) {
+  const { allowDecrease = false } = opts
   try {
     if (!session.value) { totalTests.value = 0; return }
     const r = await fetch('http://localhost:3000/api/me/stats', { headers: { Authorization: `Bearer ${session.value.access_token}` } })
     const j = await r.json()
-    totalTests.value = Number(j.totalTests || 0)
-  } catch { totalTests.value = 0 }
+    const newTotal = Number(j.totalTests || 0)
+    if (allowDecrease) totalTests.value = newTotal
+    else totalTests.value = Math.max(Number(totalTests.value || 0), newTotal)
+  } catch {
+    if (allowDecrease) totalTests.value = 0
+  }
 }
 async function login() {
   if (!supabase) { alert('Supabase не настроен'); return }
@@ -638,7 +646,7 @@ async function login() {
     if (error) { alert('Ошибка входа: ' + error.message); return }
     session.value = data.session
     showLogin.value = false
-    await loadProfile(); await loadStats()
+    await loadProfile(); await loadStats({ allowDecrease: true })
   } finally {
     loginLoading.value = false
   }
@@ -647,8 +655,11 @@ async function logout() {
   try { await supabase?.auth.signOut() } catch {}
   session.value = null; profile.value = null; totalTests.value = 0
 }
-supabase?.auth.getSession().then(({ data }) => { session.value = data.session || null }).then(loadProfile).then(loadStats)
-supabase?.auth.onAuthStateChange((_e, s) => { session.value = s; loadProfile(); loadStats() })
+supabase?.auth.getSession()
+  .then(({ data }) => { session.value = data.session || null })
+  .then(loadProfile)
+  .then(() => loadStats({ allowDecrease: true }))
+supabase?.auth.onAuthStateChange((_e, s) => { session.value = s; loadProfile(); loadStats({ allowDecrease: true }) })
 
 // history/leaderboard
 const showHistory = ref(false)
@@ -1224,6 +1235,7 @@ async function runAll() {
                 screenshotsByTest.value[tests.value[obj.stream].id] = arr
               })
               refreshScreenshotsCount()
+              if (session.value) totalTests.value = Number(totalTests.value || 0) + 1
               // refresh user stats after each finished stream
               try { await loadStats() } catch {}
               // send found errors as bugs
@@ -1337,6 +1349,7 @@ async function runTest(idx) {
                 screenshotsByTest.value[tests.value[obj.stream].id] = arr
               })
               refreshScreenshotsCount()
+              if (session.value) totalTests.value = Number(totalTests.value || 0) + 1
               try { await loadStats() } catch {}
               try {
                 if (session.value) {
@@ -1652,6 +1665,16 @@ body {
 .user-chip .role { font-size:.85em; color: #5b6f95; }
 .user-actions { display:flex; align-items:center; gap:8px; }
 .user-actions .tests-counter { padding:6px 10px; background:#f7faff; border:1px solid #e7ebfa; border-radius:10px; color:#1a3d8f; }
+.donation-note {
+  margin-top: 16px;
+  padding: 12px 14px;
+  background: #fff7e6;
+  border: 1px solid #ffd9a6;
+  border-radius: 10px;
+  color: #8a510f;
+  font-size: 14px;
+  line-height: 1.4;
+}
 .login-btn { background: linear-gradient(180deg, #233048 0%, #141b2d 100%); border-color:#2b3a55; color:#fff; }
 
 .history-list { display:flex; flex-direction:column; gap:10px; width:100%; max-height:65vh; overflow:auto; }
