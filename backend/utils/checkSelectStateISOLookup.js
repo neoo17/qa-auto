@@ -18,8 +18,9 @@ async function fetchIsoRegionsFromWiki(countryCode, lang = 'en') {
     const $ = cheerio.load(html);
 
     const countryUpper = countryCode.toUpperCase();
-    if (countryUpper === 'CA' && lang === 'en') {
-        return parseCanadaEnTable($, countryUpper);
+    if ((countryUpper === 'CA' || countryUpper === 'US') && lang === 'en') {
+        const parsed = parsePlainRowTable($, countryUpper);
+        if (parsed.length) return parsed;
     }
 
     const regions = [];
@@ -76,7 +77,7 @@ function cleanRegionName(name) {
     return name.replace(/\s*\(([a-z]{2,4})\)\s*$/i, '').trim();
 }
 
-function parseCanadaEnTable($, countryUpper) {
+function parsePlainRowTable($, countryUpper) {
     const regions = [];
     const table = $('table.wikitable').filter((i, el) => {
         const $el = $(el);

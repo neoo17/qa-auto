@@ -267,9 +267,9 @@
                       <li>Название: {{ info.package.templates?.title }}</li>
                       <li>SKU: {{ info.package.sku }}</li>
                       <li>Количество: {{ info.package.quantity }}</li>
-                      <li>Цена: ${{ info.package.price }}</li>
-                      <li>Полная цена: ${{ info.package.fullprice }}</li>
-                      <li>Retail: ${{ info.package.templates?.retail }}</li>
+                      <li>Цена: {{ info.package.price }}</li>
+                      <li>Полная цена: {{ info.package.fullprice }}</li>
+                      <li>Retail: {{ info.package.templates?.retail }}</li>
                     </ul>
                   </div>
                 </template>
@@ -396,11 +396,12 @@
             <li>
               <b>Пример:</b> <code>3-1-0-2</code>
               <ul>
-                <li>Выбрать <b>3-й пакет</b></li>
+                <li>Выбрать <b>3-й пакет</b> (Если к номеру пакета добавить '<b>p</b>' например <b>3p</b> - будет покупка с пречеком)</li>
                 <li><b>1-й апсейл</b>: купить по <b>первому</b> <code>a.button__yes</code></li>
                 <li><b>2-й апсейл</b>: отклонить (No)</li>
                 <li><b>3-й апсейл</b>: купить по <b>последнему</b> <code>div.button__yes</code></li>
               </ul>
+
             </li>
             <li>
               <b>Если поле пустое</b> — будет выбран 1-й пакет, <b>все апсейлы будут куплены</b> до confirmation.
