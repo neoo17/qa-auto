@@ -101,6 +101,83 @@ module.exports = async function checkCheckoutForm(page, log, custom, sendTestInf
     log('💳 Проверяем и заполняем форму #checkout...');
     await page.waitForSelector('form#checkout', { timeout: 7000 });
 
+    const currentYear = new Date().getFullYear();
+    const expYearStart = currentYear;
+    const expYearEnd = currentYear + 14;
+    const expYearDefault = String(currentYear + 5);
+
+    try {
+        const expYearSelect = 'select[name="expYear"]';
+        const expYearEl = await page.$(expYearSelect);
+        if (!expYearEl) {
+            log('⚠️ [expYear] Селект не найден — пропускаем проверку списка годов.');
+        } else {
+            const yearOptions = await page.$$eval(
+                `${expYearSelect} option`,
+                opts => opts
+                    .filter(o => !o.disabled && o.value)
+                    .map(o => ({
+                        value: String(o.value || '').trim(),
+                        text: String(o.textContent || '').trim()
+                    }))
+            );
+            if (!yearOptions.length) {
+                log('❌ [expYear] В селекте нет доступных значений года.');
+            } else {
+                const expectedCount = expYearEnd - expYearStart + 1;
+                const valueNums = [];
+                const textNums = [];
+                const nonNumeric = [];
+                const mismatches = [];
+
+                for (const opt of yearOptions) {
+                    const valueNum = parseInt(opt.value, 10);
+                    const textNum = parseInt(opt.text, 10);
+                    const valueOk = Number.isFinite(valueNum);
+                    const textOk = Number.isFinite(textNum);
+
+                    if (valueOk) valueNums.push(valueNum);
+                    if (textOk) textNums.push(textNum);
+
+                    if (!valueOk || !textOk) {
+                        nonNumeric.push(`${opt.value}|${opt.text}`);
+                    } else if (valueNum !== textNum) {
+                        mismatches.push(`${opt.value}!=${opt.text}`);
+                    }
+                }
+
+                if (nonNumeric.length) {
+                    log(`❌ [expYear] Некорректные value/text (не числа): ${nonNumeric.join(', ')}`);
+                }
+                if (mismatches.length) {
+                    log(`❌ [expYear] Несовпадение value/text: ${mismatches.join(', ')}`);
+                }
+
+                const isConsecutive = (arr) => arr.every((y, idx) => idx === 0 || y === arr[idx - 1] + 1);
+                const valueOk =
+                    valueNums.length === yearOptions.length &&
+                    valueNums[0] === expYearStart &&
+                    valueNums[valueNums.length - 1] === expYearEnd &&
+                    valueNums.length === expectedCount &&
+                    isConsecutive(valueNums);
+                const textOk =
+                    textNums.length === yearOptions.length &&
+                    textNums[0] === expYearStart &&
+                    textNums[textNums.length - 1] === expYearEnd &&
+                    textNums.length === expectedCount &&
+                    isConsecutive(textNums);
+
+                if (valueOk && textOk && !nonNumeric.length && !mismatches.length) {
+                    log(`✅ [expYear] Список годов корректный (value и текст): ${expYearStart}-${expYearEnd} (${expectedCount} значений)`);
+                } else if (!nonNumeric.length && !mismatches.length) {
+                    log(`❌ [expYear] Неверный список годов. Ожидали ${expYearStart}-${expYearEnd} (${expectedCount} значений подряд). Получили value: ${valueNums.join(', ')}; text: ${textNums.join(', ')}`);
+                }
+            }
+        }
+    } catch (e) {
+        log('⚠️ Ошибка при проверке expYear: ' + (e.message || e));
+    }
+
     try {
         if (custom && (custom.partner === 'dnav3' || custom.partner === 'newdna') && custom.shipping === false) {
             const standardInput = page.locator('input#standard');
@@ -249,7 +326,7 @@ module.exports = async function checkCheckoutForm(page, log, custom, sendTestInf
     log('🔄 Проверяем статус "retry" (cvv: 000)...');
     await page.fill('input[name="cardNumber"]', '4716934807660821');
     await page.selectOption('select[name="expMonth"]', '01');
-    await page.selectOption('select[name="expYear"]', '2030');
+    await page.selectOption('select[name="expYear"]', expYearDefault);
     await page.fill('input[name="cvv"]', '000');
     await waitLoaderGone(page);
 
@@ -287,7 +364,7 @@ module.exports = async function checkCheckoutForm(page, log, custom, sendTestInf
     }
 
     // --- Проверка негативных сценариев по картам ---
-    async function checkCardNegative({ number, expMonth = '01', expYear = '2030', cvv = '123', expectError, label }) {
+    async function checkCardNegative({ number, expMonth = '01', expYear = expYearDefault, cvv = '123', expectError, label }) {
         try {
             log(`💳 Проверяем ${label}...`);
             await page.fill('input[name="cardNumber"]', number);
@@ -418,10 +495,10 @@ module.exports = async function checkCheckoutForm(page, log, custom, sendTestInf
     log('✅ Заполняем тестовую карту на успешную покупку...');
     await page.fill('input[name="cardNumber"]', '4716934807660821');
     await page.selectOption('select[name="expMonth"]', '01');
-    await page.selectOption('select[name="expYear"]', '2030');
+    await page.selectOption('select[name="expYear"]', expYearDefault);
     await page.fill('input[name="cvv"]', '123');
     await waitLoaderGone(page);
-    log('✅ Данные тестовой карты заполнены: 4716 9348 0766 0821, 01/2030, cvv 123');
+    log(`✅ Данные тестовой карты заполнены: 4716 9348 0766 0821, 01/${expYearDefault}, cvv 123`);
 
     let mainResp, add3dsReq, ds3Resp, stateAfterSubmit;
     try {
