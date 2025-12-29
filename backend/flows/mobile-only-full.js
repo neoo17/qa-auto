@@ -24,6 +24,7 @@ const checkOnPage = require("../utils/checkOnPage");
 const checkPunctuation = require("../utils/checkPunctuation");
 const checkSelectStateISOLookup = require("../utils/checkSelectStateISOLookup");
 const checkBrokenImages = require("../utils/checkBrokenImages");
+const checkFooterYear = require("../utils/checkFooterYear");
 
 module.exports = async function mobileOnlyFlow(
     page, log, context, url, country, custom, sendPerf, sendTestInfo, screenshotDir, firstState
@@ -44,6 +45,7 @@ module.exports = async function mobileOnlyFlow(
     if (typeof sendPerf === 'function') await collectPerfStats(page, 'main', sendPerf);
 
     await checkBrokenImages(page, log, sendTestInfo);
+    await checkFooterYear(page, log, "index");
 
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
@@ -59,6 +61,7 @@ module.exports = async function mobileOnlyFlow(
     const stateData2 = await qualifyStatePromise;
 
     await checkBrokenImages(page, log, sendTestInfo);
+    await checkFooterYear(page, log, "qualify");
 
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
@@ -82,6 +85,7 @@ module.exports = async function mobileOnlyFlow(
     const stateData3 = await chooseStatePromise;
 
     await checkBrokenImages(page, log, sendTestInfo);
+    await checkFooterYear(page, log, "choose");
 
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
@@ -103,6 +107,7 @@ module.exports = async function mobileOnlyFlow(
     log('=== Полученная страна: ' + country);
 
     await checkBrokenImages(page, log, sendTestInfo);
+    await checkFooterYear(page, log, "shipping");
 
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
@@ -128,6 +133,7 @@ module.exports = async function mobileOnlyFlow(
     const stateData5 = await checkoutStatePromise;
 
     await checkBrokenImages(page, log, sendTestInfo);
+    await checkFooterYear(page, log, "checkout");
 
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
@@ -141,4 +147,3 @@ module.exports = async function mobileOnlyFlow(
 
     return await checkCheckoutForm(page, log, custom, sendTestInfo, checkStateAjax, custom.checkType);
 };
-

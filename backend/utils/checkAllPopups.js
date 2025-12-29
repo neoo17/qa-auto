@@ -5,25 +5,6 @@
  * @param {string} pageName
  */
 module.exports = async function checkAllPopups(page, log, partner, pageName) {
-    if (pageName !== 'confirmation') {
-        const currentYear = new Date().getFullYear();
-        try {
-            const yearEl = await page.$('span.container-year');
-            if (!yearEl) {
-                log(`❌[${pageName}] Не найден элемент .container-year в футере`);
-            } else {
-                const yearText = await yearEl.evaluate(el => (el.textContent || '').trim());
-                if (yearText === String(currentYear)) {
-                    log(`✅[${pageName}] Год в футере корректный: ${yearText}`);
-                } else {
-                    log(`❌[${pageName}] Неверный год в футере. Ожидали ${currentYear}, получили "${yearText || '—'}"`);
-                }
-            }
-        } catch (e) {
-            log(`⚠️[${pageName}] Ошибка при проверке года в футере: ${e.message || e}`);
-        }
-    }
-
     const allLinks = await page.$$('.modal-link');
     const visibleLinks = [];
     for (const link of allLinks) {

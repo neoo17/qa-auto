@@ -21,6 +21,7 @@ const checkOnPage = require("../utils/checkOnPage");
 const checkPunctuation = require("../utils/checkPunctuation");
 const checkSelectStateISOLookup = require("../utils/checkSelectStateISOLookup");
 const checkBrokenImages = require("../utils/checkBrokenImages");
+const checkFooterYear = require("../utils/checkFooterYear");
 
 module.exports = async function shortMobile(
     page, log, context, url, country, custom, sendPerf, sendTestInfo, screenshotDir, firstState
@@ -33,6 +34,7 @@ module.exports = async function shortMobile(
     const stateData2 = await firstState;
 
     await checkBrokenImages(page, log, sendTestInfo);
+    await checkFooterYear(page, log, "qualify");
 
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
@@ -56,6 +58,7 @@ module.exports = async function shortMobile(
     const stateData3 = await chooseStatePromise;
 
     await checkBrokenImages(page, log, sendTestInfo);
+    await checkFooterYear(page, log, "choose");
 
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
@@ -78,6 +81,7 @@ module.exports = async function shortMobile(
     log('=== Полученная страна: ' + country);
 
     await checkBrokenImages(page, log, sendTestInfo);
+    await checkFooterYear(page, log, "shipping");
 
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
@@ -105,6 +109,7 @@ module.exports = async function shortMobile(
     const stateData5 = await checkoutStatePromise;
 
     await checkBrokenImages(page, log, sendTestInfo);
+    await checkFooterYear(page, log, "checkout");
 
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
@@ -118,5 +123,4 @@ module.exports = async function shortMobile(
 
     return await checkCheckoutForm(page, log, custom, sendTestInfo, checkStateAjax, custom.checkType);
 }
-
 

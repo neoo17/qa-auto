@@ -1,4 +1,5 @@
 const shot = require('../utils/screenshotHelper');
+const checkFooterYear = require('../utils/checkFooterYear');
 
 function getExpectedUpsale({ upsales, profile, upsaleIndex, page }) {
     // Приоритет: если это первый апсейл и есть количество пакетов —
@@ -179,6 +180,8 @@ module.exports = async function handleUpsales(
             await page.goForward();
             await page.waitForTimeout(350);
         }
+
+        await checkFooterYear(page, log, `upsale-${upsaleIndex}`);
 
         // --- ДЕЙСТВИЕ ДЛЯ ТЕКУЩЕГО АПСЕЙЛА ---
         // actions[0] — пакет, поэтому берём actions[upsaleIndex]

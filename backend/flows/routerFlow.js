@@ -9,6 +9,7 @@ const checkPageTitleMatchesState = require("../utils/checkPageTitleMatchesState"
 const handleUpsales = require("../utils/handleUpsales");
 const checkConfirmationPage = require("../utils/checkConfirmationPage");
 const checkBrokenImages = require("../utils/checkBrokenImages");
+const checkFooterYear = require("../utils/checkFooterYear");
 
 
 module.exports = async function routerFlow(page, log, context, url, country, custom, sendPerf, sendTestInfo, screenshotDir) {
@@ -52,6 +53,7 @@ async function continueFlowAfterQualify(
         await checkPageTitleMatchesState(page, stateData, log, "confirmation");
 
         await checkBrokenImages(page, log, sendTestInfo);
+        await checkFooterYear(page, log, "confirmation");
 
         if (custom.checkType === 'full' && (custom.partner === 'ga' || custom.partner === 'hg')) {
             await checkAllPopups(page, log, custom.partner, "confirmation");
@@ -64,6 +66,7 @@ async function continueFlowAfterQualify(
         await checkPageTitleMatchesState(page, stateData, log, "confirmation");
 
         await checkBrokenImages(page, log, sendTestInfo);
+        await checkFooterYear(page, log, "confirmation");
 
         if (custom.checkType === 'full' && (custom.partner === 'ga' || custom.partner === 'hg')) {
             await checkAllPopups(page, log, custom.partner, "confirmation");

@@ -22,6 +22,7 @@ const chooseProductByCustomParam = require("../utils/chooseProductByCustomParam"
 const checkChoosePackages = require("../utils/checkChoosePackages");
 const checkSelectStateISOLookup = require("../utils/checkSelectStateISOLookup");
 const checkBrokenImages = require("../utils/checkBrokenImages");
+const checkFooterYear = require("../utils/checkFooterYear");
 
 /**
  * Десктопный флоу с объединенной формой shipping
@@ -69,6 +70,7 @@ module.exports = async function Basic(
     if (typeof sendPerf === 'function') await collectPerfStats(page, 'main', sendPerf);
 
     await checkBrokenImages(page, log, sendTestInfo);
+    await checkFooterYear(page, log, 'index');
 
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
@@ -95,6 +97,7 @@ module.exports = async function Basic(
     const stateData3 = await orderStatePromise;
 
     await checkBrokenImages(page, log, sendTestInfo);
+    await checkFooterYear(page, log, "order");
 
     if (custom.checkType === 'full') {
         await checkPunctuation(page, log, country);
