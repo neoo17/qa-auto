@@ -34,6 +34,20 @@ function rest(pathname) {
 
 async function incrementUserTotal(userId, delta = 1) {
   if (!userId || !delta) return
+  try {
+    const rpcUrl = `${SUPABASE_URL}/rest/v1/rpc/increment_test_run_total`
+    const res = await fetch(rpcUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_SERVICE_ROLE,
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}`
+      },
+      body: JSON.stringify({ p_user: userId, p_delta: delta })
+    })
+    if (res.ok) return
+  } catch {}
+
   const current = await getUserTotal(userId)
   const next = (current || 0) + delta
   await upsertUserTotal(userId, next)

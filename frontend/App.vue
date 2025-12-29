@@ -636,7 +636,7 @@ async function loadStats(opts = {}) {
     if (allowDecrease) totalTests.value = newTotal
     else totalTests.value = Math.max(Number(totalTests.value || 0), newTotal)
   } catch {
-    if (allowDecrease) totalTests.value = 0
+    // keep last known total on transient fetch errors
   }
 }
 async function login() {
