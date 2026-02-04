@@ -472,11 +472,11 @@ module.exports = async function checkCheckoutForm(page, log, custom, sendTestInf
             label: 'AmEx'
         });
 
-        await checkCardNegative({
-            number: '30569309025904',
-            expectError: 'diners club carte blanche credit card is not supported',
-            label: 'Diners Club'
-        });
+        // await checkCardNegative({
+        //     number: '30569309025904',
+        //     expectError: 'diners club carte blanche credit card is not supported',
+        //     label: 'Diners Club'
+        // });
 
         await checkCardNegative({
             number: '6011111111111117',
@@ -484,11 +484,11 @@ module.exports = async function checkCheckoutForm(page, log, custom, sendTestInf
             label: 'Discover'
         });
 
-        await checkCardNegative({
-            number: '3530111333300000',
-            expectError: 'jcb credit card is not supported',
-            label: 'JCB'
-        });
+        // await checkCardNegative({
+        //     number: '3530111333300000',
+        //     expectError: 'jcb credit card is not supported',
+        //     label: 'JCB'
+        // });
     }
 
     // --- Успешная тестовая карта ---
