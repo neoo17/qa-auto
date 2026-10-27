@@ -6,6 +6,8 @@
  * @param {Function} sendTestInfo
  * @param {Array} products
  */
+const handlePackagePopup = require('./handlePackagePopup');
+
 module.exports = async function chooseByCustomParam(page, log, custom, sendTestInfo, products) {
     // --- отладка входа ---
 
@@ -30,11 +32,11 @@ module.exports = async function chooseByCustomParam(page, log, custom, sendTestI
 
     const orderType = actions[0] || 1;
 
-    const selector = `.package[data-order-type="${orderType}"]`;
+    const selector = `.package[data-order-type="${orderType}"]:not(.upgrade__yes_button):not(.upgrade__no_button)`;
     const pkg = await page.$(selector);
 
     // 2) Информация о пакете
-    const packageInfo = Array.isArray(products) ? products[orderType - 1] : undefined;
+    let packageInfo = Array.isArray(products) ? products[orderType - 1] : undefined;
 
     // 3) Ошибка, если пакет не найден
     if (!pkg) {
@@ -51,10 +53,26 @@ module.exports = async function chooseByCustomParam(page, log, custom, sendTestI
         package: packageInfo
     });
 
-    const [request] = await Promise.all([
-        page.waitForRequest(req => req.method() === 'POST' && req.url().includes('/order'), { timeout: 5000 }),
-        pkg.click()
+    // The popup intercepts the first click; /order is sent only after its YES/NO action.
+    const requestPromise = page.waitForRequest(
+        req => req.method() === 'POST' && /\/order(?:\?|$)/.test(req.url()), { timeout: 15000 }
+    );
+    requestPromise.catch(() => {}); // A failed click must not leave an unhandled waiter.
+    await pkg.click();
+    const popup = page.locator('.upgrade__wrapper:visible').first();
+    const first = await Promise.race([
+        requestPromise.then(request => ({ request })),
+        popup.waitFor({ state: 'visible', timeout: 5000 })
+            .then(() => ({ popup: true }), () => ({ popup: false }))
     ]);
+    if (first.popup) {
+        const selected = await handlePackagePopup(page, log, custom?.packagePopup || 'skip', products, pkg);
+        if (selected) {
+            packageInfo = selected;
+            sendTestInfo?.({ message: 'Пакет выбран в попапе', package: selected });
+        }
+    }
+    const request = first.request || await requestPromise;
 
     // 6) Проверяем отправку
     if (request) {

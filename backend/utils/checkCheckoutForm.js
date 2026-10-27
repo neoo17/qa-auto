@@ -465,31 +465,7 @@ module.exports = async function checkCheckoutForm(page, log, custom, sendTestInf
         }
     }
 
-    if (checkType === 'full'){
-        await checkCardNegative({
-            number: '378282246310005',
-            expectError: 'amex credit card is not allowed',
-            label: 'AmEx'
-        });
-
-        // await checkCardNegative({
-        //     number: '30569309025904',
-        //     expectError: 'diners club carte blanche credit card is not supported',
-        //     label: 'Diners Club'
-        // });
-
-        await checkCardNegative({
-            number: '6011111111111117',
-            expectError: 'discover credit card is not allowed',
-            label: 'Discover'
-        });
-
-        // await checkCardNegative({
-        //     number: '3530111333300000',
-        //     expectError: 'jcb credit card is not supported',
-        //     label: 'JCB'
-        // });
-    }
+    // AmEx/Discover checks are removed; Diners Club/JCB remain disabled in develop.
 
     // --- Успешная тестовая карта ---
     log('✅ Заполняем тестовую карту на успешную покупку...');

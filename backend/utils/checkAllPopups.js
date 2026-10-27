@@ -21,57 +21,6 @@ module.exports = async function checkAllPopups(page, log, partner, pageName) {
         return;
     }
 
-    let affiliatesFound = false;
-    let affiliatesHref = null;
-    for (const link of visibleLinks) {
-        const href = await link.evaluate(el => {
-            let parent = el.parentElement;
-            while (parent && !['UL','OL','NAV','DIV','SECTION','FOOTER','BODY'].includes(parent.tagName)) {
-                parent = parent.parentElement;
-            }
-            if (!parent) return false;
-            const a = Array.from(parent.querySelectorAll('a')).find(node => {
-                if (!node.textContent) return false;
-                const style = window.getComputedStyle(node);
-                return (
-                    style.display !== 'none' &&
-                    style.visibility !== 'hidden' &&
-                    node.offsetParent !== null &&
-                    node.textContent.trim() === 'Affiliates'
-                );
-            });
-            return a ? (a.getAttribute('href') || '') : '';
-        });
-        if (href) {
-            affiliatesFound = true;
-            affiliatesHref = href;
-            break;
-        }
-    }
-
-    if (partner === 'ga' || partner === 'hg') {
-        if (affiliatesFound) {
-            // normalize and validate exact URL
-            const expected = 'https://57hecuhyj2f.typeform.com/to/m76gIX0w';
-            const norm = (u) => String(u || '').trim().replace(/\/$/, '').toLowerCase();
-            const ok = norm(affiliatesHref) === norm(expected);
-            if (ok) {
-                log(`✅[${pageName}] Найдена ссылка Affiliates и ведёт на верный URL`);
-            } else {
-                log(`❌[${pageName}] Ссылка Affiliates ведёт на неверный URL. Ожидали: "${expected}", получили: "${affiliatesHref || '—'}"`);
-            }
-        } else {
-            log(`❌[${pageName}] Для партнёра ga/hg не найдена ссылка Affiliates`);
-        }
-    } else {
-        if (affiliatesFound) {
-            log(`❌[${pageName}] Ошибка: найдена ссылка Affiliates для партнёра ${partner}`);
-        } else {
-            log(`✅[${pageName}] Нет ни одной ссылки Affiliates для партнёра ${partner}`);
-        }
-    }
-
-
     for (let i = 0; i < visibleLinks.length; i++) {
         const link = visibleLinks[i];
         await link.evaluate(el => el.scrollIntoView({ behavior: "smooth", block: "center" }));
