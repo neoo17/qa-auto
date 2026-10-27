@@ -64,7 +64,7 @@ module.exports = async function Basic(
         await checkAllPopups(page, log, custom.partner, 'index');
     }
 
-    if (custom.partner === 'ga' || custom.partner === 'gh') {
+    if (custom.partner === 'ga' || custom.partner === 'hg') {
         await checkSelectStateISOLookup(page, country, log, 'select[name="shipping_state"]')
     }
     await shot(page, screenshotDir, 'index', log);

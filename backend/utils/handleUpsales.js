@@ -1,4 +1,5 @@
 const shot = require('../utils/screenshotHelper');
+const handlePhysicalUpsales = require('./handlePhysicalUpsales');
 
 function getExpectedUpsale({ upsales, profile, upsaleIndex, page }) {
     let url = page.url();
@@ -92,6 +93,16 @@ function compareSku({ expectedUpsale, postDataParsed, upsaleIndex, log, sendTest
 module.exports = async function handleUpsales(
     page, log, custom, sendTestInfo, checkStateAjax, firstUpsaleState, screenshotDir, partner
 ) {
+    const currentSku = page.url().match(/\/upsale-(\d+)\.html/i)?.[1];
+    const physical = firstUpsaleState?.upsales?.find(product =>
+        String(product.sku) === currentSku && String(product.product_type).toLowerCase() === 'physical');
+    if (physical && !['newdna', 'dnav3'].includes(partner)) {
+        return handlePhysicalUpsales(page, log, custom, sendTestInfo, firstUpsaleState, screenshotDir);
+    }
+    const rawSchema = typeof custom === 'string' ? custom : (custom?.param || custom?.customParam || '');
+    if (/\d+b/i.test(rawSchema)) {
+        throw new Error('Выбор количества (2b/4b) доступен в Physical-флоу GA/HG; для этого флоу используйте действия 0/1/2/3');
+    }
     // ---- Фикс: берём param / customParam / строку и нормализуем ----
     const norm = v => String(v || '')
         .replace(/[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, '-') // разные тире -> '-'

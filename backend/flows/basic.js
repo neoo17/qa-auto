@@ -59,7 +59,7 @@ module.exports = async function Basic(
     
     await testThreeDS(page, log, custom.threeDS, 'index');
 
-    if (custom.partner === 'ga' || custom.partner === 'gh') {
+    if (custom.partner === 'ga' || custom.partner === 'hg') {
         await checkSelectStateISOLookup(page, country, log, 'select[name="state"]')
     }
 

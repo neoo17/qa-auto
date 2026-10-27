@@ -46,7 +46,8 @@ async function continueFlowAfterQualify(
     if (stateData && stateData.data.upsales.length > 0) {
         log('──────────────────────────────');
         log('➡️ Переход на апсейлы (upsales)');
-        await handleUpsales(page, log, custom, sendTestInfo, checkStateAjax, stateData.data, screenshotDir, custom.partner);
+        const finalState = await handleUpsales(page, log, custom, sendTestInfo, checkStateAjax, stateData.data, screenshotDir, custom.partner);
+        if (finalState) stateData = finalState;
 
         // --- Confirmation ---
         await checkPageTitleMatchesState(page, stateData, log, "confirmation");

@@ -67,13 +67,16 @@ module.exports = async function shortMobile(
     await checkPageTitleMatchesState(page, stateData3, log, "choose");
     if (typeof sendPerf === 'function') await collectPerfStats(page, 'choose', sendPerf);
     await checkChoosePackages(page, stateData3.data.products, log);
-    await chooseByCustomParam(page, log, custom, sendTestInfo, stateData3.data.products);
+    // Subscribe before selecting: both a direct choice and a popup can navigate immediately.
+    const shippingStatePromise = Promise.all([
+        checkStateAjax(page, log),
+        chooseByCustomParam(page, log, custom, sendTestInfo, stateData3.data.products)
+    ]);
 
     // --- Shipping ---
     log('──────────────────────────────');
     log('➡️ Переход на shipping');
-    const shippingStatePromise = checkStateAjax(page, log);
-    const stateData4 = await shippingStatePromise;
+    const [stateData4] = await shippingStatePromise;
 
     log('=== Полученная страна: ' + country);
 
@@ -84,7 +87,7 @@ module.exports = async function shortMobile(
         await testGdprBlockAdvanced(page, log, country, custom.partner, "checkout");
         await checkAllPopups(page, log, custom.partner, "shipping");
     }
-    if (custom.partner === 'ga' || custom.partner === 'gh') {
+    if (custom.partner === 'ga' || custom.partner === 'hg') {
         await checkSelectStateISOLookup(page, country, log, 'select[name="state"]')
     }
 

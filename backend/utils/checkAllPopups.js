@@ -21,47 +21,6 @@ module.exports = async function checkAllPopups(page, log, partner, pageName) {
         return;
     }
 
-    let affiliatesFound = false;
-    for (const link of visibleLinks) {
-        const found = await link.evaluate(el => {
-            let parent = el.parentElement;
-            while (parent && !['UL','OL','NAV','DIV','SECTION','FOOTER','BODY'].includes(parent.tagName)) {
-                parent = parent.parentElement;
-            }
-            if (!parent) return false;
-            const a = Array.from(parent.querySelectorAll('a')).find(node => {
-                if (!node.textContent) return false;
-                const style = window.getComputedStyle(node);
-                return (
-                    style.display !== 'none' &&
-                    style.visibility !== 'hidden' &&
-                    node.offsetParent !== null &&
-                    node.textContent.trim() === 'Affiliates'
-                );
-            });
-            return !!a;
-        });
-        if (found) {
-            affiliatesFound = true;
-            break;
-        }
-    }
-
-    if (partner === 'ga' || partner === 'hg') {
-        if (affiliatesFound) {
-            log(`✅[${pageName}] Найдена видимая ссылка Affiliates`);
-        } else {
-            log(`❌[${pageName}] Для партнёра ga/hg не найдена ссылка Affiliates`);
-        }
-    } else {
-        if (affiliatesFound) {
-            log(`❌[${pageName}] Ошибка: найдена ссылка Affiliates для партнёра ${partner}`);
-        } else {
-            log(`✅[${pageName}] Нет ни одной ссылки Affiliates для партнёра ${partner}`);
-        }
-    }
-
-
     for (let i = 0; i < visibleLinks.length; i++) {
         const link = visibleLinks[i];
         await link.evaluate(el => el.scrollIntoView({ behavior: "smooth", block: "center" }));

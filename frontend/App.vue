@@ -76,7 +76,7 @@
         </select>
       </div>
 
-      <div style="display:flex; gap:13px; align-items:center; flex-wrap:nowrap; margin-top:15px">
+      <div style="display:flex; gap:13px; align-items:center; flex-wrap:wrap; margin-top:15px">
         <select v-model="globalConfig.selectedDevice" @change="syncGlobalToTests">
           <option v-for="d in devicesList" :value="d.value" :key="d.value">{{ d.label }}</option>
         </select>
@@ -93,6 +93,9 @@
           >
             {{ versionLabel(globalConfig.selectedBrowser, v) }}
           </option>
+        </select>
+        <select v-model="globalConfig.packagePopup" @change="syncGlobalToTests" aria-label="Попап выбора пакета" class="package-popup-select">
+          <option v-for="opt in packagePopupOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
         </select>
       </div>
     </div>
@@ -189,6 +192,13 @@
                 <span>Девайс:</span>
                 <select v-model="test.selectedDevice">
                   <option v-for="d in devicesList" :value="d.value" :key="d.value">{{ d.label }}</option>
+                </select>
+              </div>
+
+              <div class="per-test-setting">
+                <span>Попап пакета:</span>
+                <select v-model="test.packagePopup">
+                  <option v-for="opt in packagePopupOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
                 </select>
               </div>
 
@@ -355,6 +365,7 @@
                 <li><code>2</code> — <span style="color:#2abf2a;font-weight:600">Покупаем</span> апсейл ("Yes") по блоку <b>DIV</b> <code>div.button__yes</code></li>
                 <li><code>3</code> — <span style="color:#2abf2a;font-weight:600">Покупаем</span> апсейл ("Yes") по <b>последнему видимому</b> <code>a.button__yes</code></li>
                 <li><code>0</code> — <span style="color:#c82d2d;font-weight:600">Отклоняем</span> апсейл ("No") <code>a.button__no</code></li>
+                <li><code>2b</code> / <code>4b</code> — купить физический апсейл, выбрав 2 / 4 банки.</li>
               </ul>
             </li>
             <li>
@@ -371,6 +382,8 @@
             </li>
           </ul>
           <p><b>Финиш:</b> если после апсейлов наступает страница <code>confirmation.html</code>, обработка заканчивается.</p>
+          <p><code>1-2b-1</code> — первый основной пакет, 2 банки на первом физическом апсейле, покупка второго предложения, если оно появится. <code>1-0-1</code> — пропустить первое предложение и купить второе. Варианты 2/4 банки считаются одним шагом.</p>
+          <p>Мобильный попап пакета по умолчанию пропускается с сохранением исходного пакета. В настройках можно выбрать пакет №1 (3+2) или №2 (2+1) в попапе. Если попап появился, но выбранный вариант недоступен, тест сообщит об ошибке.</p>
           <p>
             <b>Кратко:</b><br>
             <code>1</code> — купить по <b>первому</b> <code>a.button__yes</code><br>
@@ -480,6 +493,11 @@ const checkTypeList = [
   { value: 'full', label: 'Full' },
   { value: 'fast', label: 'Fast' }
 ]
+const packagePopupOptions = [
+  { value: 'skip', label: 'Попап: сохранить пакет' },
+  { value: '1', label: 'Попап: пакет №1 (3+2)' },
+  { value: '2', label: 'Попап: пакет №2 (2+1)' }
+]
 const browsersList = [
   { value: 'chromium', label: 'Chromium/Chrome', devices: ['', 'Pixel 5', 'Desktop'], versions: ['stable', '120', '125'] },
   { value: 'firefox', label: 'Firefox', devices: ['', 'Pixel 5', 'Desktop'], versions: ['stable', 'esr']},
@@ -506,6 +524,7 @@ const globalConfig = reactive({
   selectedVersion: 'stable',
   selectedPartner: 'hg',
   selectedCheckType: 'full',
+  packagePopup: 'skip',
   shipping: false // <-- новый глобальный флаг
 })
 
@@ -528,6 +547,7 @@ function makeTestObj() {
     selectedVersion: globalConfig.selectedVersion,
     selectedPartner: globalConfig.selectedPartner,
     selectedCheckType: globalConfig.selectedCheckType,
+    packagePopup: globalConfig.packagePopup,
     shipping: globalConfig.shipping, // <-- пер-тестовый флаг
     customParam: '',
     logs: [],
@@ -617,6 +637,7 @@ function syncGlobalToTests() {
       t.selectedVersion = globalConfig.selectedVersion
       t.selectedPartner = globalConfig.selectedPartner
       t.selectedCheckType = globalConfig.selectedCheckType
+      t.packagePopup = globalConfig.packagePopup
       t.shipping = globalConfig.shipping // <-- проталкиваем
     }
   })
@@ -631,6 +652,7 @@ function toggleCustomConfig(test) {
     test.selectedVersion = globalConfig.selectedVersion
     test.selectedPartner = globalConfig.selectedPartner
     test.selectedCheckType = globalConfig.selectedCheckType
+    test.packagePopup = globalConfig.packagePopup
     test.shipping = globalConfig.shipping // <-- начальное значение
   }
 }
@@ -771,6 +793,7 @@ async function runAll() {
       customParam: t.customParam,
       partner: t.selectedPartner,
       checkType: t.selectedCheckType,
+      packagePopup: t.packagePopup,
       threeDS: t.selected3ds,
       shipping: !!t.shipping // <-- ПРОКИДЫВАЕМ
     },
@@ -840,6 +863,7 @@ async function runTest(idx) {
     t.selectedVersion = globalConfig.selectedVersion
     t.selectedPartner = globalConfig.selectedPartner
     t.selectedCheckType = globalConfig.selectedCheckType
+    t.packagePopup = globalConfig.packagePopup
     t.shipping = globalConfig.shipping
   }
 
@@ -867,6 +891,7 @@ async function runTest(idx) {
       param: t.customParam,
       partner: t.selectedPartner,
       checkType: t.selectedCheckType,
+      packagePopup: t.packagePopup,
       threeDS: t.selected3ds,
       shipping: !!t.shipping // <-- ПРОКИДЫВАЕМ
     },
@@ -906,10 +931,10 @@ async function runTest(idx) {
               else t.pageWeights.push(obj)
             }
             if (obj.type === 'end') {
-              tests.value[obj.stream].testEnded = true
-              tests.value[obj.stream].loading = false
-              getScreenshotsReal(tests.value[obj.stream]).then(arr => {
-                screenshotsByTest.value[tests.value[obj.stream].id] = arr
+              t.testEnded = true
+              t.loading = false
+              getScreenshotsReal(t).then(arr => {
+                screenshotsByTest.value[t.id] = arr
               })
             }
             if (obj.type === 'testInfo') {
@@ -1370,6 +1395,10 @@ pre, .info-report pre {
 
 .global-config-card select:focus {
   border: 1.7px solid #86acff;
+}
+
+.global-config-card .package-popup-select {
+  max-width: none;
 }
 
 @media (max-width: 1200px) {

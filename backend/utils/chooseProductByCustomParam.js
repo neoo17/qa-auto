@@ -3,8 +3,8 @@ module.exports = async function chooseProductByCustomParam(page, log, custom, se
     if (custom && typeof custom === 'string' && custom.trim().length > 0) {
         selectSchema = custom.trim();
     }
-    if (custom && typeof custom === 'object' && custom.customParam) {
-        selectSchema = custom.customParam;
+    if (custom && typeof custom === 'object' && (custom.param || custom.customParam)) {
+        selectSchema = String(custom.param || custom.customParam);
     }
 
     let mainIndex = selectSchema;

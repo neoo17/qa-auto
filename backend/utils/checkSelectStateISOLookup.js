@@ -3,7 +3,7 @@ const cheerio = require('cheerio');
 
 function extractCountryAndLang(rawCode) {
     if (!rawCode) return { country: '', lang: 'en' };
-    const [country, lang] = rawCode.split('_');
+    const [country, lang] = rawCode.toLowerCase().replace('-', '_').split('_');
     return {
         country: country.toLowerCase(),
         lang: lang ? lang.toLowerCase() : 'en'
@@ -15,10 +15,45 @@ async function fetchIsoRegionsFromWiki(countryCode, lang = 'en') {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Не удалось загрузить Wikipedia (${lang}): ${res.statusText}`);
     const html = await res.text();
+    return parseIsoRegions(html, countryCode, lang);
+}
+
+// Expand merged heading cells so "Nom français" maps to the actual data column.
+function findFrenchColumn($, table) {
+    const grid = [];
+    $(table).find('tr').each((rowIndex, row) => {
+        if (!$(row).children('th').length) return;
+        grid[rowIndex] ||= [];
+        let column = 0;
+        $(row).children('th, td').each((_, cell) => {
+            while (grid[rowIndex][column] !== undefined) column++;
+            const text = $(cell).text().trim();
+            const rows = Number($(cell).attr('rowspan')) || 1;
+            const cols = Number($(cell).attr('colspan')) || 1;
+            for (let r = 0; r < rows; r++) {
+                grid[rowIndex + r] ||= [];
+                for (let c = 0; c < cols; c++) grid[rowIndex + r][column + c] = text;
+            }
+            column += cols;
+        });
+    });
+    for (const row of grid) {
+        const index = row?.findIndex(text => /nom\s+français|french\s+name/i.test(text));
+        if (index >= 0) return index;
+    }
+    return -1;
+}
+
+function parseIsoRegions(html, countryCode, lang = 'en') {
     const $ = cheerio.load(html);
 
     const regions = [];
     $('table.wikitable').each((tableIdx, table) => {
+        const frenchColumn = countryCode.toLowerCase() === 'ca' && lang === 'fr'
+            ? findFrenchColumn($, table)
+            : null;
+        // Do not silently compare CA-FR labels against the English column.
+        if (frenchColumn === -1) return;
         $(table).find('tbody tr').each((i, row) => {
             const tds = $(row).find('td');
             if (tds.length < 2) return;
@@ -32,7 +67,8 @@ async function fetchIsoRegionsFromWiki(countryCode, lang = 'en') {
                     codeText = cellText;
                     // ИСПОЛЬЗУЙ ЭТУ ЛОГИКУ:
                     nameText = null;
-                    const allLinks = tds.eq(1 - idx).find('a').toArray();
+                    const nameCell = tds.eq(frenchColumn ?? (1 - idx));
+                    const allLinks = nameCell.find('a').toArray();
                     for (const a of allLinks) {
                         const $a = $(a);
                         if ($a.find('img').length) continue;
@@ -44,7 +80,7 @@ async function fetchIsoRegionsFromWiki(countryCode, lang = 'en') {
                             break;
                         }
                     }
-                    if (!nameText) nameText = tds.eq(1 - idx).text().trim();
+                    if (!nameText) nameText = nameCell.text().trim();
                     break;
                 }
             }
@@ -154,3 +190,5 @@ module.exports = async function checkSelectOptionsISOAndNamesViaWiki(page, rawCo
         );
     }
 };
+
+module.exports.parseIsoRegions = parseIsoRegions;
